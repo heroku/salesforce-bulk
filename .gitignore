@@ -1,0 +1,4 @@
+salesforce_bulk.egg-info*
+*/salesforce_bulk.egg-info/*
+build/*
+dist/*
