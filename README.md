@@ -86,9 +86,15 @@ batch = bulk.post_bulk_batch(job, csv_iter)
 
 bulk.wait_for_batch(job, batch)
 
+bulk.close_job(job)
+
 print "Done. Accounts uploaded."
 ```
 
+### Concurrency mode
+
+When creating the job, pass `concurrency=Serial` or `concurrency=Parallel` to set the
+concurrency mode for the job.
 
 
 

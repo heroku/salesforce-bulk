@@ -489,4 +489,4 @@ class SalesforceBulk(object):
                         quotes = 0
 
         return lines
-
+        
