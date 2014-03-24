@@ -307,94 +307,48 @@ class SalesforceBulk(object):
             waited += sleep_interval
 
 
-    # Retrieve the results of a batch query. Your callback will be invoked 0 or more times
-    # with a TemporaryFile object from which you can read the returned data. If the batch is not
-    # ready then your callback may not be invoked.
-    # Returns False if the batch isn't Completed, or True if it is and was processed.
-    #
-    # By default your callback will receive a File-like object with the raw results. You can
-    # pass 'parse_csv = True' to request that CSV data be parsed. In this case your callback
-    # will receive two parameters. The first will be a list of successfully parsed rows.
-    # Each row will contained a list of values. The column names will appear as the first row.
-    # So for csv data:
-    #
-    #   "field1","field2"
-    #   "row1col1","row1col2"
-    #
-    # You will receive: [["field1","field2"],["row1col1","row2col2"]]
-    #
-    # The second argument will be a list of records which failed parsing. The format of each row is:
-    #    [<line number>,<error message>, <csv record>]
-
-    # You can pass batch_size=N to have your callback invoked with batches of at most N rows. Note
-    # that row[0] of *every* batch will hold the list of columns names.
-    #
-    # This call is resumable. You should record the 'line' (int) and 'result_id' (str) passed to your callback,
-    # and if you need to restart in the middle you can pass those values back as 'skip_lines' and
-    # 'skip_to_result' in the call. We will move ahead to the indicated result file, then skip
-    # the count of lines before sending additional rows to your callback.
-
-    def get_batch_results(self, job_id, batch_id, callback = dump_results, parse_csv=False, batch_size=0,
-                          skip_lines=None, skip_to_result=None, logger=None):
+    def get_batch_result_ids(self, batch_id, job_id=None):
         job_id = job_id or self.lookup_job_id(batch_id)
-
         if not self.is_batch_done(job_id, batch_id):
             return False
-        http = Http()
-        uri = self.endpoint + "/services/async/29.0/job/%s/batch/%s/result" % (job_id, batch_id)
-        resp, content = http.request(uri, method="GET", headers=self.headers())
 
-        tree = ET.fromstring(content)
-        for result in tree.iterfind("{%s}result" % self.jobNS):
-            result_id = str(result.text)
+        uri = urlparse.urljoin(
+            self.endpoint,
+            "services/async/29.0/job/{0}/batch/{1}/result".format(
+                job_id, batch_id),
+        )
+        resp = requests.get(uri, headers=self.headers())
+        if resp.status_code != 200:
+            return False
 
-            if skip_to_result and result_id != skip_to_result:
-                logger("Skipping processed bulk result '%s'" % result_id)
-                continue
+        tree = ET.fromstring(resp.content)
+        return [str(r.text) for r in \
+                tree.iterfind("{{{0}}}result".format(self.jobNS))]
 
-            ruri = self.endpoint + "/services/async/29.0/job/%s/batch/%s/result/%s" % (job_id, batch_id, result_id)
-            if logger:
-                logger("Downloading bulk result file: %s" % result_id)
-                #print "$$$$$$$$$$ Downloading bulk result file: %s" % ruri
-            resp = requests.get(ruri, headers=self.headers(), stream=True)
-            tf = TemporaryFile()
-            for chunk in resp.iter_content(1024):
-                tf.write(chunk) # assume we're writing utf8
-                print "##"
-            resp.close()
+    def get_batch_results(self, batch_id, result_id, job_id=None,
+            parse_csv=False, logger=None):
+        job_id = job_id or self.lookup_job_id(batch_id)
+        logger = logger or (lambda message: None)
 
-            total_remaining = self.count_file_lines(tf)
-            if skip_lines:
-                total_remaining -= skip_lines
-                logger("Skipping %d lines of bulk file" % skip_lines)
+        uri = urlparse.urljoin(
+            self.endpoint,
+            "services/async/29.0/job/{0}/batch/{1}/result/{2}".format(
+                job_id, batch_id, result_id),
+        )
+        logger('Downloading bulk result file id=#{0}'.format(result_id))
+        resp = requests.get(uri, headers=self.headers(), stream=True)
 
-            if logger:
-                logger("Total records: %d" % total_remaining)
+        if not parse_csv:
+            iterator = resp.iter_lines()
+        else:
+            iterator = csv.reader(resp.iter_lines(), delimiter=',',
+                    quotechar='"')
 
-            tf.seek(0)
-            if not parse_csv:
-                callback(tf)
-            else:
-                records = []
-                line_number = 0
-                col_names = []
-                reader = csv.reader(tf, delimiter=",", quotechar='"')
-                for row in reader:
-                    line_number += 1
-                    if line_number > 1 and skip_lines and line_number <= skip_lines:
-                        continue
-                    records.append(row)
-                    if len(records) == 1:
-                        col_names = records[0]
-                    if batch_size > 0 and len(records) >= (batch_size+1):
-                        callback(records, remaining=total_remaining, line=line_number, result_id=result_id)
-                        total_remaining -= (len(records)-1)
-                        records = [col_names]
-                callback(records, remaining=total_remaining, line=line_number, result_id=result_id)
-
-            tf.close()
-
-        return True
+        BATCH_SIZE = 5000
+        for i, line in enumerate(iterator):
+            if i % BATCH_SIZE == 0:
+                logger('Loading bulk result #{0}'.format(i))
+            yield line
 
     def get_batch_result_iter(self, job_id, batch_id, parse_csv=False, logger=None):
         """Return a line interator over the contents of a batch result document. If csv=True then parses the first line
