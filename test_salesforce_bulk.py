@@ -1,3 +1,4 @@
+import re
 import unittest
 
 import salesforce_oauth_request
@@ -20,7 +21,7 @@ class SalesforceBulkTest(unittest.TestCase):
                 self.bulk.close_job(job_id)
 
     def test_raw_query(self):
-        bulk = SalesforceBulk(self.endpoint, self.sessionId)
+        bulk = SalesforceBulk(self.sessionId, self.endpoint)
         self.bulk = bulk
 
         job_id = bulk.create_query_job("Contact")
@@ -47,7 +48,7 @@ class SalesforceBulkTest(unittest.TestCase):
 
 
     def test_csv_query(self):
-        bulk = SalesforceBulk(self.endpoint, self.sessionId)
+        bulk = SalesforceBulk(self.sessionId, self.endpoint)
         self.bulk = bulk
 
         job_id = bulk.create_query_job("Account")
@@ -84,7 +85,7 @@ class SalesforceBulkTest(unittest.TestCase):
 
 
     def test_csv_upload(self):
-        bulk = SalesforceBulk(self.endpoint, self.sessionId)
+        bulk = SalesforceBulk(self.sessionId, self.endpoint)
         self.bulk = bulk
 
         job_id = bulk.create_insert_job("Contact")
@@ -130,7 +131,7 @@ if __name__ == '__main__':
     username = raw_input("Salesforce username: ")
     password = raw_input("Salesforce password: ")
 
-    login = salesforce_oauth_request.login(username=username, password=password)
+    login = salesforce_oauth_request.login(username=username, password=password, cache_session=True)
     endpoint = login['endpoint']
     sessionId = login['access_token']
 
