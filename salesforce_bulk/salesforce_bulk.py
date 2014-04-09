@@ -23,15 +23,18 @@ def dump_results(data, failed, count):
         print data
 
 class BulkApiError(Exception):
-    pass
+    def __init__(self, message, status_code=None):
+        Exception.__init__(self, message)
+        self.status_code = status_code
 
 class SalesforceBulk(object):
-    def __init__(self, sessionId = None, host=None, username=None, password=None):
+    def __init__(self, sessionId = None, host=None, username=None, password=None,
+                 exception_class=BulkApiError):
         if not sessionId and not username:
             raise RuntimeError("Must supply either sessionId/instance_url or username/password")
         if not sessionId:
             sessionId, endpoint = SalesforceBulk.login_to_salesforce(username, password)
-            host = urlparse.urlparse(self.h._location)
+            host = urlparse.urlparse(endpoint)
             host = host.hostname.replace("-api","")
 
         if host[0:4] == 'http':
@@ -44,6 +47,7 @@ class SalesforceBulk(object):
         self.jobs = {} # dict of job_id => job_id
         self.batches = {} # dict of batch_id => job_id
         self.batch_statuses = {}
+        self.exception_class = exception_class
 
     @staticmethod
     def login_to_salesforce(username, password):
@@ -88,7 +92,9 @@ class SalesforceBulk(object):
                                   concurrency=concurrency)
 
         http = Http()
-        resp, content = http.request(self.endpoint + "/services/async/29.0/job", "POST", headers=self.headers(), body=doc)
+        resp, content = http.request(self.endpoint + "/services/async/29.0/job", "POST", 
+            headers=self.headers(), 
+            body=doc)
 
         self.check_status(resp, content)
 
@@ -101,7 +107,8 @@ class SalesforceBulk(object):
     def check_status(self, resp, content):
         if resp.status >= 400:
             print "Non-200 status: %d" % resp.status
-            raise Exception(content)
+            msg = "Bulk API HTTP Error result: {0}".format(content)
+            self.raise_error(msg, resp.status)
 
     def close_job(self, job_id):
         doc = self.create_close_job_doc()
@@ -193,7 +200,7 @@ class SalesforceBulk(object):
 
             if resp.status_code >= 400:
                 print "Non-200 status: %d" % resp.status
-                raise Exception(content)
+                self.raise_error(content, resp.status)
 
             tree = ET.fromstring(content)
             batch_id = tree.findtext("{%s}id" % self.jobNS)
@@ -203,6 +210,15 @@ class SalesforceBulk(object):
 
         return batch_ids
 
+    def raise_error(self, message, status_code=None):
+        if status_code:
+            message = "[{0}] {1}".format(status_code, message)
+
+        if self.exception_class == BulkApiError:
+            raise self.exception_class(message, status_code=status_code)
+        else:
+            raise self.exception_class(message)
+
     def post_bulk_batch(self, job_id, csv_generator):
         uri = self.endpoint + "/services/async/29.0/job/%s/batch" % job_id
         resp = requests.post(uri, data=csv_generator, headers=self.headers({"Content-Type":"text/csv"}))
@@ -210,7 +226,7 @@ class SalesforceBulk(object):
 
         if resp.status_code >= 400:
             print "Non-200 status: %d" % resp.status_code
-            raise Exception(content)
+            self.raise_error(content, resp.status_code)
 
         tree = ET.fromstring(content)
         batch_id = tree.findtext("{%s}id" % self.jobNS)
@@ -247,7 +263,7 @@ class SalesforceBulk(object):
 
             if resp.status_code >= 400:
                 print "Non-200 status: %d" % resp.status
-                raise Exception(content)
+                self.raise_error(content, resp.status)
 
             tree = ET.fromstring(content)
             batch_id = tree.findtext("{%s}id" % self.jobNS)
@@ -296,7 +312,7 @@ class SalesforceBulk(object):
             status = self.batch_status(job_id, batch_id)
             if state == 'Failed':
                 self.close_job(job_id)
-            raise BulkApiError("Batch %s of job %s failed: %s" % (batch_id, job_id, status['stateMessage']))
+            self.raise_error("Batch %s of job %s failed: %s" % (batch_id, job_id, status['stateMessage']))
         return state == 'Completed'
 
     # Wait for the given batch to complete, waiting at most timeout seconds (defaults to 10 minutes).
