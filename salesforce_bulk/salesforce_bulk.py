@@ -310,8 +310,6 @@ class SalesforceBulk(object):
         print "BULK STATE IS: %s" % state
         if state == 'Failed' or state == 'Not Processed':
             status = self.batch_status(job_id, batch_id)
-            if state == 'Failed':
-                self.close_job(job_id)
             self.raise_error("Batch %s of job %s failed: %s" % (batch_id, job_id, status['stateMessage']))
         return state == 'Completed'
 
