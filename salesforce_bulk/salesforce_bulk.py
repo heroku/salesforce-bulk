@@ -363,10 +363,6 @@ class SalesforceBulk(object):
             return None
 
     def is_batch_done(self, job_id, batch_id):
-        job_state = self.job_state(job_id)
-        if job_state == bulk_states.ABORTED:
-            raise BulkJobAborted(job_id)
-
         batch_state = self.batch_state(job_id, batch_id, reload=True)
         if batch_state in bulk_states.ERROR_STATES:
             status = self.batch_status(job_id, batch_id)
