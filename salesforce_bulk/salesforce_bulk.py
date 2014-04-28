@@ -16,13 +16,6 @@ import csv
 UploadResult = namedtuple('UploadResult', 'id success created error')
 
 
-def dump_results(data, failed, count):
-    if hasattr(data, 'read'):
-        print data.read()
-    else:
-        print data
-
-
 class BulkApiError(Exception):
 
     def __init__(self, message, status_code=None):
@@ -60,8 +53,6 @@ class SalesforceBulk(object):
         else:
             self.endpoint = "https://" + host
         self.sessionId = sessionId
-        # print "Creating bulk adapter, endpoint %s, id: %s" % (endpoint,
-        # sessionId)
         self.jobNS = 'http://www.force.com/2009/06/asyncapi/dataload'
         self.jobs = {}  # dict of job_id => job_id
         self.batches = {}  # dict of batch_id => job_id
@@ -137,7 +128,6 @@ class SalesforceBulk(object):
 
     def check_status(self, resp, content):
         if resp.status >= 400:
-            print "Non-200 status: %d" % resp.status
             msg = "Bulk API HTTP Error result: {0}".format(content)
             self.raise_error(msg, resp.status)
 
@@ -210,10 +200,7 @@ class SalesforceBulk(object):
                 headers = line
                 batch = headers
                 continue
-            if not i % 100:
-                print i / 100
             if not i % batch_size:
-                print 'New batch at %s' % i
                 batches.append(batch)
                 batch = headers
 
@@ -232,12 +219,10 @@ class SalesforceBulk(object):
         uri = self.endpoint + "/services/async/29.0/job/%s/batch" % job_id
         headers = self.headers({"Content-Type": "text/csv"})
         for batch in batches:
-            print len(batch)
             resp = requests.post(uri, data=batch, headers=headers)
             content = resp.content
 
             if resp.status_code >= 400:
-                print "Non-200 status: %d" % resp.status
                 self.raise_error(content, resp.status)
 
             tree = ET.fromstring(content)
@@ -264,7 +249,6 @@ class SalesforceBulk(object):
         content = resp.content
 
         if resp.status_code >= 400:
-            print "Non-200 status: %d" % resp.status_code
             self.raise_error(content, resp.status_code)
 
         tree = ET.fromstring(content)
@@ -275,7 +259,6 @@ class SalesforceBulk(object):
     def bulk_delete(self, job_id, object_type, where, batch_size=2500):
         query_job_id = self.create_query_job(object_type)
         soql = "Select Id from %s where %s Limit 10000" % (object_type, where)
-        print soql
         query_batch_id = self.query(query_job_id, soql)
         self.wait_for_batch(query_job_id, query_batch_id, timeout=120)
 
@@ -297,14 +280,10 @@ class SalesforceBulk(object):
         uri = self.endpoint + "/services/async/29.0/job/%s/batch" % job_id
         headers = self.headers({"Content-Type": "text/csv"})
         for batch in results:
-            print len(batch)
-            print batch
-            print batch.split('\n')
             resp = requests.post(uri, data=batch, headers=headers)
             content = resp.content
 
             if resp.status_code >= 400:
-                print "Non-200 status: %d" % resp.status
                 self.raise_error(content, resp.status)
 
             tree = ET.fromstring(content)
@@ -351,7 +330,6 @@ class SalesforceBulk(object):
 
     def is_batch_done(self, job_id, batch_id):
         state = self.batch_state(job_id, batch_id, reload=True)
-        print "BULK STATE IS: %s" % state
         if state == 'Failed' or state == 'Not Processed':
             status = self.batch_status(job_id, batch_id)
             raise BulkJobFailed(job_id, batch_id, status['stateMessage'])
@@ -438,7 +416,8 @@ class SalesforceBulk(object):
         else:
             return r.iter_lines(chunk_size=2048)
 
-    def get_upload_results(self, job_id, batch_id, callback=dump_results,
+    def get_upload_results(self, job_id, batch_id,
+                           callback=(lambda *args, **kwargs: None),
                            batch_size=0, logger=None):
         job_id = job_id or self.lookup_job_id(batch_id)
 
@@ -477,7 +456,6 @@ class SalesforceBulk(object):
         return True
 
     def parse_csv(self, tf, callback, batch_size, total_remaining):
-        print batch_size, total_remaining
         records = []
         line_number = 0
         col_names = []
