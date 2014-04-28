@@ -1,3 +1,5 @@
+from __future__ import absolute_import
+
 # Interface to the Salesforce BULK API
 import os
 from collections import namedtuple
@@ -13,6 +15,8 @@ import re
 import time
 import csv
 
+from . import bulk_states
+
 UploadResult = namedtuple('UploadResult', 'id success created error')
 
 
@@ -23,7 +27,16 @@ class BulkApiError(Exception):
         self.status_code = status_code
 
 
-class BulkJobFailed(BulkApiError):
+class BulkJobAborted(BulkApiError):
+
+    def __init__(self, job_id):
+        self.job_id = job_id
+
+        message = 'Job {0} aborted'.format(job_id)
+        super(BulkJobAborted, self).__init__(message)
+
+
+class BulkBatchFailed(BulkApiError):
 
     def __init__(self, job_id, batch_id, state_message):
         self.job_id = job_id
@@ -32,7 +45,7 @@ class BulkJobFailed(BulkApiError):
 
         message = 'Batch {0} of job {1} failed: {2}'.format(batch_id, job_id,
                                                             state_message)
-        super(BulkJobFailed, self).__init__(message)
+        super(BulkBatchFailed, self).__init__(message)
 
 
 class SalesforceBulk(object):
@@ -301,6 +314,27 @@ class SalesforceBulk(object):
             raise Exception(
                 "Batch id '%s' is uknown, can't retrieve job_id" % batch_id)
 
+    def job_status(self, job_id=None):
+        job_id = job_id or self.lookup_job_id(batch_id)
+        uri = urlparse.urljoin(self.endpoint,
+            '/services/async/29.0/job/{0}'.format(job_id))
+        response = requests.get(uri, headers=self.headers())
+        if response.status_code != 200:
+            self.raise_error(response.content, response.status_code)
+
+        tree = ET.fromstring(response.content)
+        result = {}
+        for child in tree:
+            result[re.sub("{.*?}", "", child.tag)] = child.text
+        return result
+
+    def job_state(self, job_id):
+        status = self.job_status(job_id)
+        if 'state' in status:
+            return status['state']
+        else:
+            return None
+
     def batch_status(self, job_id=None, batch_id=None, reload=False):
         if not reload and batch_id in self.batch_statuses:
             return self.batch_statuses[batch_id]
@@ -329,11 +363,15 @@ class SalesforceBulk(object):
             return None
 
     def is_batch_done(self, job_id, batch_id):
-        state = self.batch_state(job_id, batch_id, reload=True)
-        if state == 'Failed' or state == 'Not Processed':
+        job_state = self.job_state(job_id)
+        if job_state == bulk_states.ABORTED:
+            raise BulkJobAborted(job_id)
+
+        batch_state = self.batch_state(job_id, batch_id, reload=True)
+        if batch_state in bulk_states.ERROR_STATES:
             status = self.batch_status(job_id, batch_id)
-            raise BulkJobFailed(job_id, batch_id, status['stateMessage'])
-        return state == 'Completed'
+            raise BulkBatchFailed(job_id, batch_id, status['stateMessage'])
+        return batch_state == bulk_states.COMPLETED
 
     # Wait for the given batch to complete, waiting at most timeout seconds
     # (defaults to 10 minutes).
