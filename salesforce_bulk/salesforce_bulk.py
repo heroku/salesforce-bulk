@@ -24,8 +24,20 @@ def dump_results(data, failed, count):
 
 class BulkApiError(Exception):
     def __init__(self, message, status_code=None):
-        Exception.__init__(self, message)
+        super(BulkApiError, self).__init__(message)
         self.status_code = status_code
+
+
+class BulkJobFailed(BulkApiError):
+    def __init__(self, job_id, batch_id, state_message):
+        self.job_id = job_id
+        self.batch_id = batch_id
+        self.state_message = state_message
+
+        message = 'Batch {0} of job {1} failed: {2}'.format(batch_id, job_id,
+            state_message)
+        super(BulkJobFailed, self).__init__(message)
+
 
 class SalesforceBulk(object):
     def __init__(self, sessionId = None, host=None, username=None, password=None,
@@ -310,7 +322,7 @@ class SalesforceBulk(object):
         print "BULK STATE IS: %s" % state
         if state == 'Failed' or state == 'Not Processed':
             status = self.batch_status(job_id, batch_id)
-            self.raise_error("Batch %s of job %s failed: %s" % (batch_id, job_id, status['stateMessage']))
+            raise BulkJobFailed(job_id, batch_id, status['stateMessage'])
         return state == 'Completed'
 
     # Wait for the given batch to complete, waiting at most timeout seconds (defaults to 10 minutes).
