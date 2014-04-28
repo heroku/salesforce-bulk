@@ -22,61 +22,78 @@ def dump_results(data, failed, count):
     else:
         print data
 
+
 class BulkApiError(Exception):
+
     def __init__(self, message, status_code=None):
         super(BulkApiError, self).__init__(message)
         self.status_code = status_code
 
 
 class BulkJobFailed(BulkApiError):
+
     def __init__(self, job_id, batch_id, state_message):
         self.job_id = job_id
         self.batch_id = batch_id
         self.state_message = state_message
 
         message = 'Batch {0} of job {1} failed: {2}'.format(batch_id, job_id,
-            state_message)
+                                                            state_message)
         super(BulkJobFailed, self).__init__(message)
 
 
 class SalesforceBulk(object):
-    def __init__(self, sessionId = None, host=None, username=None, password=None,
+
+    def __init__(self, sessionId=None, host=None, username=None, password=None,
                  exception_class=BulkApiError):
         if not sessionId and not username:
-            raise RuntimeError("Must supply either sessionId/instance_url or username/password")
+            raise RuntimeError(
+                "Must supply either sessionId/instance_url or username/password")
         if not sessionId:
-            sessionId, endpoint = SalesforceBulk.login_to_salesforce(username, password)
+            sessionId, endpoint = SalesforceBulk.login_to_salesforce(
+                username, password)
             host = urlparse.urlparse(endpoint)
-            host = host.hostname.replace("-api","")
+            host = host.hostname.replace("-api", "")
 
         if host[0:4] == 'http':
             self.endpoint = host
         else:
             self.endpoint = "https://" + host
         self.sessionId = sessionId
-        #print "Creating bulk adapter, endpoint %s, id: %s" % (endpoint, sessionId)
+        # print "Creating bulk adapter, endpoint %s, id: %s" % (endpoint,
+        # sessionId)
         self.jobNS = 'http://www.force.com/2009/06/asyncapi/dataload'
-        self.jobs = {} # dict of job_id => job_id
-        self.batches = {} # dict of batch_id => job_id
+        self.jobs = {}  # dict of job_id => job_id
+        self.batches = {}  # dict of batch_id => job_id
         self.batch_statuses = {}
         self.exception_class = exception_class
 
     @staticmethod
     def login_to_salesforce(username, password):
-        for key in ['SALESFORCE_CLIENT_ID','SALESFORCE_CLIENT_SECRET','SALESFORCE_REDIRECT_URI']:
-            if key not in os.environ:
-                raise RuntimeError("You must set %s to use username/pass login" % key)
+        env_vars = (
+            'SALESFORCE_CLIENT_ID',
+            'SALESFORCE_CLIENT_SECRET',
+            'SALESFORCE_REDIRECT_URI',
+        )
+        missing_env_vars = [e for e in env_vars if e not in os.environ]
+        if missing_env_vars:
+            raise RuntimeError(
+                "You must set {0} to use username/pass login".format(
+                    ', '.join(missing_env_vars)))
 
         try:
             import salesforce_oauth_request
         except ImportError:
-            raise ImportError("You must install salesforce-oauth-request to use username/password")
+            raise ImportError(
+                "You must install salesforce-oauth-request to use username/password")
 
-        packet = salesforce_oauth_request.login(username=username, password=password)
-        return packet['access_token'],packet['instance_url']
+        packet = salesforce_oauth_request.login(
+            username=username, password=password)
+        return packet['access_token'], packet['instance_url']
 
-    def headers(self, values = {}):
-        default = {"X-SFDC-Session" : self.sessionId, "Content-Type" : "application/xml; charset=UTF-8"}
+    def headers(self, values={}):
+        default = {"X-SFDC-Session": self.sessionId,
+                   "Content-Type": "application/xml; charset=UTF-8"}
         for k, val in values.iteritems():
             default[k] = val
         return default
@@ -94,7 +111,8 @@ class SalesforceBulk(object):
     def create_delete_job(self, object_name, **kwargs):
         return self.create_job(object_name, "delete", **kwargs)
 
-    def create_job(self, object_name = None, operation = None, contentType = 'CSV', concurrency=None):
+    def create_job(self, object_name=None, operation=None, contentType='CSV',
+                   concurrency=None):
         assert(object_name is not None)
         assert(operation is not None)
 
@@ -104,9 +122,10 @@ class SalesforceBulk(object):
                                   concurrency=concurrency)
 
         http = Http()
-        resp, content = http.request(self.endpoint + "/services/async/29.0/job", "POST", 
-            headers=self.headers(), 
-            body=doc)
+        resp, content = http.request(self.endpoint + "/services/async/29.0/job",
+                                     "POST",
+                                     headers=self.headers(),
+                                     body=doc)
 
         self.check_status(resp, content)
 
@@ -125,16 +144,17 @@ class SalesforceBulk(object):
     def close_job(self, job_id):
         doc = self.create_close_job_doc()
         http = Http()
-        resp, content = http.request(self.endpoint + "/services/async/29.0/job/%s" % job_id, "POST",
-            headers=self.headers(), body=doc)
+        url = self.endpoint + "/services/async/29.0/job/%s" % job_id
+        resp, content = http.request(url, "POST", headers=self.headers(),
+                                     body=doc)
         self.check_status(resp, content)
 
-
-    def create_job_doc(self, object_name = None, operation = None, contentType = 'CSV', concurrency=None):
+    def create_job_doc(self, object_name=None, operation=None,
+                       contentType='CSV', concurrency=None):
         root = ET.Element("jobInfo")
         root.set("xmlns", self.jobNS)
         op = ET.SubElement(root, "operation")
-        op.text  = operation
+        op.text = operation
         obj = ET.SubElement(root, "object")
         obj.text = object_name
         if concurrency:
@@ -145,27 +165,32 @@ class SalesforceBulk(object):
 
         buf = StringIO.StringIO()
         tree = ET.ElementTree(root)
-        tree.write(buf, encoding ="UTF-8")
+        tree.write(buf, encoding="UTF-8")
         return buf.getvalue()
 
-    def create_close_job_doc(self, object_name = None, operation = None, contentType = 'CSV'):
+    def create_close_job_doc(self, object_name=None, operation=None,
+                             contentType='CSV'):
         root = ET.Element("jobInfo")
         root.set("xmlns", self.jobNS)
         state = ET.SubElement(root, "state")
-        state.text  = "Closed"
+        state.text = "Closed"
 
         buf = StringIO.StringIO()
         tree = ET.ElementTree(root)
-        tree.write(buf, encoding ="UTF-8")
+        tree.write(buf, encoding="UTF-8")
         return buf.getvalue()
 
     # Add a BulkQuery to the job - returns the batch id
     def query(self, job_id, soql):
         if job_id is None:
-            job_id = self.create_job(re.search(re.compile("from (\w+)",re.I), soql).group(1), "query")
+            job_id = self.create_job(
+                re.search(re.compile("from (\w+)", re.I), soql).group(1),
+                "query")
         http = Http()
         uri = self.endpoint + "/services/async/29.0/job/%s/batch" % job_id
-        resp, content = http.request(uri, method="POST", body=soql, headers=self.headers({"Content-Type":"text/csv"}))
+        headers = self.headers({"Content-Type": "text/csv"})
+        resp, content = http.request(uri, method="POST", body=soql,
+                                     headers=headers)
 
         self.check_status(resp, content)
 
@@ -205,9 +230,10 @@ class SalesforceBulk(object):
         batch_ids = []
 
         uri = self.endpoint + "/services/async/29.0/job/%s/batch" % job_id
+        headers = self.headers({"Content-Type": "text/csv"})
         for batch in batches:
             print len(batch)
-            resp = requests.post(uri, data=batch, headers=self.headers({"Content-Type":"text/csv"}))
+            resp = requests.post(uri, data=batch, headers=headers)
             content = resp.content
 
             if resp.status_code >= 400:
@@ -233,7 +259,8 @@ class SalesforceBulk(object):
 
     def post_bulk_batch(self, job_id, csv_generator):
         uri = self.endpoint + "/services/async/29.0/job/%s/batch" % job_id
-        resp = requests.post(uri, data=csv_generator, headers=self.headers({"Content-Type":"text/csv"}))
+        headers = self.headers({"Content-Type": "text/csv"})
+        resp = requests.post(uri, data=csv_generator, headers=headers)
         content = resp.content
 
         if resp.status_code >= 400:
@@ -253,10 +280,12 @@ class SalesforceBulk(object):
         self.wait_for_batch(query_job_id, query_batch_id, timeout=120)
 
         results = []
+
         def save_results(tf, **kwargs):
             results.append(tf.read())
 
-        flag = self.get_batch_results(query_job_id, query_batch_id, callback = save_results)
+        flag = self.get_batch_results(
+            query_job_id, query_batch_id, callback=save_results)
 
         if job_id is None:
             job_id = self.create_job(object_type, "delete")
@@ -266,11 +295,12 @@ class SalesforceBulk(object):
         batch_ids = []
 
         uri = self.endpoint + "/services/async/29.0/job/%s/batch" % job_id
+        headers = self.headers({"Content-Type": "text/csv"})
         for batch in results:
             print len(batch)
             print batch
             print batch.split('\n')
-            resp = requests.post(uri, data=batch, headers=self.headers({"Content-Type":"text/csv"}))
+            resp = requests.post(uri, data=batch, headers=headers)
             content = resp.content
 
             if resp.status_code >= 400:
@@ -289,23 +319,25 @@ class SalesforceBulk(object):
         try:
             return self.batches[batch_id]
         except KeyError:
-            raise Exception("Batch id '%s' is uknown, can't retrieve job_id" % batch_id)
+            raise Exception(
+                "Batch id '%s' is uknown, can't retrieve job_id" % batch_id)
 
-    def batch_status(self, job_id = None, batch_id = None, reload=False):
+    def batch_status(self, job_id=None, batch_id=None, reload=False):
         if not reload and batch_id in self.batch_statuses:
             return self.batch_statuses[batch_id]
 
         job_id = job_id or self.lookup_job_id(batch_id)
 
         http = Http()
-        uri = self.endpoint + "/services/async/29.0/job/%s/batch/%s" % (job_id, batch_id)
+        uri = self.endpoint + \
+            "/services/async/29.0/job/%s/batch/%s" % (job_id, batch_id)
         resp, content = http.request(uri, headers=self.headers())
         self.check_status(resp, content)
 
         tree = ET.fromstring(content)
         result = {}
         for child in tree:
-            result[re.sub("{.*?}","",child.tag)] = child.text
+            result[re.sub("{.*?}", "", child.tag)] = child.text
 
         self.batch_statuses[batch_id] = result
         return result
@@ -325,13 +357,14 @@ class SalesforceBulk(object):
             raise BulkJobFailed(job_id, batch_id, status['stateMessage'])
         return state == 'Completed'
 
-    # Wait for the given batch to complete, waiting at most timeout seconds (defaults to 10 minutes).
-    def wait_for_batch(self, job_id, batch_id, timeout = 60*10, sleep_interval=10):
+    # Wait for the given batch to complete, waiting at most timeout seconds
+    # (defaults to 10 minutes).
+    def wait_for_batch(self, job_id, batch_id, timeout=60 * 10,
+                       sleep_interval=10):
         waited = 0
         while not self.is_batch_done(job_id, batch_id) and waited < timeout:
             time.sleep(sleep_interval)
             waited += sleep_interval
-
 
     def get_batch_result_ids(self, batch_id, job_id=None):
         job_id = job_id or self.lookup_job_id(batch_id)
@@ -348,11 +381,11 @@ class SalesforceBulk(object):
             return False
 
         tree = ET.fromstring(resp.content)
-        return [str(r.text) for r in \
+        return [str(r.text) for r in
                 tree.iterfind("{{{0}}}result".format(self.jobNS))]
 
     def get_batch_results(self, batch_id, result_id, job_id=None,
-            parse_csv=False, logger=None):
+                          parse_csv=False, logger=None):
         job_id = job_id or self.lookup_job_id(batch_id)
         logger = logger or (lambda message: None)
 
@@ -368,7 +401,7 @@ class SalesforceBulk(object):
             iterator = resp.iter_lines()
         else:
             iterator = csv.reader(resp.iter_lines(), delimiter=',',
-                    quotechar='"')
+                                  quotechar='"')
 
         BATCH_SIZE = 5000
         for i, line in enumerate(iterator):
@@ -376,35 +409,44 @@ class SalesforceBulk(object):
                 logger('Loading bulk result #{0}'.format(i))
             yield line
 
-    def get_batch_result_iter(self, job_id, batch_id, parse_csv=False, logger=None):
-        """Return a line interator over the contents of a batch result document. If csv=True then parses the first line
-        as the csv header and the iterator returns dicts."""
+    def get_batch_result_iter(self, job_id, batch_id, parse_csv=False,
+                              logger=None):
+        """
+        Return a line interator over the contents of a batch result document. If
+        csv=True then parses the first line as the csv header and the iterator
+        returns dicts.
+        """
         status = self.batch_status(job_id, batch_id)
         if status['state'] != 'Completed':
             return None
         elif logger:
             if 'numberRecordsProcessed' in status:
-                logger("Bulk batch %d processed %s records" % (batch_id, status['numberRecordsProcessed']))
+                logger("Bulk batch %d processed %s records" %
+                       (batch_id, status['numberRecordsProcessed']))
             if 'numberRecordsFailed' in status:
                 failed = int(status['numberRecordsFailed'])
                 if failed > 0:
-                    logger("Bulk batch %d had %d failed records" % (batch_id, failed))
+                    logger("Bulk batch %d had %d failed records" %
+                           (batch_id, failed))
 
-        uri = self.endpoint + "/services/async/29.0/job/%s/batch/%s/result" % (job_id, batch_id)
+        uri = self.endpoint + \
+            "/services/async/29.0/job/%s/batch/%s/result" % (job_id, batch_id)
         r = requests.get(uri, headers=self.headers(), stream=True)
         if parse_csv:
-            return csv.DictReader(r.iter_lines(chunk_size=2048), delimiter=",", quotechar='"')
+            return csv.DictReader(r.iter_lines(chunk_size=2048), delimiter=",",
+                                  quotechar='"')
         else:
             return r.iter_lines(chunk_size=2048)
 
-
-    def get_upload_results(self, job_id, batch_id, callback = dump_results, batch_size=0, logger=None):
+    def get_upload_results(self, job_id, batch_id, callback=dump_results,
+                           batch_size=0, logger=None):
         job_id = job_id or self.lookup_job_id(batch_id)
 
         if not self.is_batch_done(job_id, batch_id):
             return False
         http = Http()
-        uri = self.endpoint + "/services/async/29.0/job/%s/batch/%s/result" % (job_id, batch_id)
+        uri = self.endpoint + \
+            "/services/async/29.0/job/%s/batch/%s/result" % (job_id, batch_id)
         resp, content = http.request(uri, method="GET", headers=self.headers())
 
         tf = TemporaryFile()
@@ -424,9 +466,9 @@ class SalesforceBulk(object):
             records.append(UploadResult(*row))
             if len(records) == 1:
                 col_names = records[0]
-            if batch_size > 0 and len(records) >= (batch_size+1):
+            if batch_size > 0 and len(records) >= (batch_size + 1):
                 callback(records, total_remaining, line_number)
-                total_remaining -= (len(records)-1)
+                total_remaining -= (len(records) - 1)
                 records = [col_names]
         callback(records, total_remaining, line_number)
 
@@ -445,9 +487,9 @@ class SalesforceBulk(object):
             records.append(row)
             if len(records) == 1:
                 col_names = records[0]
-            if batch_size > 0 and len(records) >= (batch_size+1):
+            if batch_size > 0 and len(records) >= (batch_size + 1):
                 callback(records, total_remaining, line_number)
-                total_remaining -= (len(records)-1)
+                total_remaining -= (len(records) - 1)
                 records = [col_names]
         return records, total_remaining
 
@@ -469,4 +511,3 @@ class SalesforceBulk(object):
                         quotes = 0
 
         return lines
-        
