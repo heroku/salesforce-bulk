@@ -3,8 +3,6 @@
 import os
 import sys
 
-import salesforce_bulk
-
 try:
     from setuptools import setup
 except ImportError:
@@ -26,10 +24,12 @@ with open('README.md') as f:
     readme = f.read()
 with open('LICENSE') as f:
     license = f.read()
+with open('salesforce_bulk/VERSION') as f:
+    version = f.read()
 
 setup(
     name='salesforce-bulk',
-    version=salesforce_bulk.__version__,
+    version=version,
     description='Python interface to the Salesforce.com Bulk API.',
     long_description=readme,
     author='Scott Persinger',
