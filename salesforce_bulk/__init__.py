@@ -1,4 +1,4 @@
 from salesforce_bulk import SalesforceBulk
 from csv_adapter import CsvDictsAdapter
 
-__version__ = '1.0.5'
+__version__ = '1.0.6'
