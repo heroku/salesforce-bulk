@@ -421,6 +421,36 @@ class SalesforceBulk(object):
                 logger('Loading bulk result #{0}'.format(i))
             yield line
 
+    def get_batch_results_iter(self, batch_id, result_id, job_id=None,
+                          parse_csv=False, logger=None):
+        """
+        Return a line interator over the contents of a batch results document. If
+        csv=True then parses the first line as the csv header and the iterator
+        returns dicts.
+        """
+        job_id = job_id or self.lookup_job_id(batch_id)
+        logger = logger or (lambda message: None)
+
+        uri = urlparse.urljoin(
+            self.endpoint,
+            "services/async/29.0/job/{0}/batch/{1}/result/{2}".format(
+                job_id, batch_id, result_id),
+        )
+        logger('Downloading bulk result file id=#{0}'.format(result_id))
+        resp = requests.get(uri, headers=self.headers(), stream=True)
+
+        if not parse_csv:
+            iterator = resp.iter_lines()
+        else:
+            iterator = csv.DictReader(resp.iter_lines(chunk_size=2048), delimiter=',',
+                                  quotechar='"')
+
+        BATCH_SIZE = 5000
+        for i, line in enumerate(iterator):
+            if i % BATCH_SIZE == 0:
+                logger('Loading bulk result #{0}'.format(i))
+            yield line
+
     def get_batch_result_iter(self, job_id, batch_id, parse_csv=False,
                               logger=None):
         """
