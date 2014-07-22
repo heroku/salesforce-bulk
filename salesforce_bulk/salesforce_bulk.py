@@ -111,19 +111,24 @@ class SalesforceBulk(object):
 
     def create_update_job(self, object_name, **kwargs):
         return self.create_job(object_name, "update", **kwargs)
+    
+    def create_upsert_job(self, object_name, **kwargs):
+        assert('external_id_field' in kwargs)
+        return self.create_job(object_name, "upsert", **kwargs)
 
     def create_delete_job(self, object_name, **kwargs):
         return self.create_job(object_name, "delete", **kwargs)
 
     def create_job(self, object_name=None, operation=None, contentType='CSV',
-                   concurrency=None):
+                   concurrency=None, external_id_field=None):
         assert(object_name is not None)
         assert(operation is not None)
 
         doc = self.create_job_doc(object_name=object_name,
                                   operation=operation,
                                   contentType=contentType,
-                                  concurrency=concurrency)
+                                  concurrency=concurrency,
+                                  external_id_field=external_id_field)
 
         http = Http()
         resp, content = http.request(self.endpoint + "/services/async/29.0/job",
@@ -153,18 +158,23 @@ class SalesforceBulk(object):
         self.check_status(resp, content)
 
     def create_job_doc(self, object_name=None, operation=None,
-                       contentType='CSV', concurrency=None):
+                       contentType='CSV', concurrency=None,
+                       external_id_field=None):
         root = ET.Element("jobInfo")
         root.set("xmlns", self.jobNS)
         op = ET.SubElement(root, "operation")
         op.text = operation
         obj = ET.SubElement(root, "object")
         obj.text = object_name
+        ct = ET.SubElement(root, "contentType")
+        ct.text = contentType
+        
         if concurrency:
             con = ET.SubElement(root, "concurrencyMode")
             con.text = concurrency
-        ct = ET.SubElement(root, "contentType")
-        ct.text = contentType
+        if external_id_field:
+            eid = ET.SubElement(root, "externalIdFieldName")
+            eid.text = external_id_field
 
         buf = StringIO.StringIO()
         tree = ET.ElementTree(root)
