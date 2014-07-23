@@ -113,14 +113,14 @@ class SalesforceBulk(object):
         return self.create_job(object_name, "update", **kwargs)
     
     def create_upsert_job(self, object_name, **kwargs):
-        assert('external_id_field' in kwargs)
+        assert('externalIdFieldName' in kwargs)
         return self.create_job(object_name, "upsert", **kwargs)
 
     def create_delete_job(self, object_name, **kwargs):
         return self.create_job(object_name, "delete", **kwargs)
 
     def create_job(self, object_name=None, operation=None, contentType='CSV',
-                   concurrency=None, external_id_field=None):
+                   concurrency=None, externalIdFieldName=None):
         assert(object_name is not None)
         assert(operation is not None)
 
@@ -128,7 +128,7 @@ class SalesforceBulk(object):
                                   operation=operation,
                                   contentType=contentType,
                                   concurrency=concurrency,
-                                  external_id_field=external_id_field)
+                                  externalIdFieldName=externalIdFieldName)
 
         http = Http()
         resp, content = http.request(self.endpoint + "/services/async/29.0/job",
@@ -159,7 +159,7 @@ class SalesforceBulk(object):
 
     def create_job_doc(self, object_name=None, operation=None,
                        contentType='CSV', concurrency=None,
-                       external_id_field=None):
+                       externalIdFieldName=None):
         root = ET.Element("jobInfo")
         root.set("xmlns", self.jobNS)
         op = ET.SubElement(root, "operation")
@@ -169,9 +169,9 @@ class SalesforceBulk(object):
         if concurrency:
             con = ET.SubElement(root, "concurrencyMode")
             con.text = concurrency
-        if external_id_field:
+        if externalIdFieldName:
             eid = ET.SubElement(root, "externalIdFieldName")
-            eid.text = external_id_field
+            eid.text = externalIdFieldName
         ct = ET.SubElement(root, "contentType")
         ct.text = contentType
 
