@@ -166,15 +166,14 @@ class SalesforceBulk(object):
         op.text = operation
         obj = ET.SubElement(root, "object")
         obj.text = object_name
-        ct = ET.SubElement(root, "contentType")
-        ct.text = contentType
-        
         if concurrency:
             con = ET.SubElement(root, "concurrencyMode")
             con.text = concurrency
         if external_id_field:
             eid = ET.SubElement(root, "externalIdFieldName")
             eid.text = external_id_field
+        ct = ET.SubElement(root, "contentType")
+        ct.text = contentType
 
         buf = StringIO.StringIO()
         tree = ET.ElementTree(root)
