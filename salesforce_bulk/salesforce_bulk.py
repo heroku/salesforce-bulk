@@ -52,12 +52,15 @@ class SalesforceBulk(object):
 
     def __init__(self, sessionId=None, host=None, username=None, password=None,
                  exception_class=BulkApiError):
-        if not sessionId and not username:
+        if not (sessionId or username):
             raise RuntimeError(
-                "Must supply either sessionId/instance_url or username/password")
+                "Must supply either sessionId/instance_url or username/password"
+            )
+
         if not sessionId:
             sessionId, endpoint = SalesforceBulk.login_to_salesforce(
-                username, password)
+                username, password
+            )
             host = urlparse.urlparse(endpoint)
             host = host.hostname.replace("-api", "")
 
@@ -65,6 +68,7 @@ class SalesforceBulk(object):
             self.endpoint = host
         else:
             self.endpoint = "https://" + host
+
         self.sessionId = sessionId
         self.jobNS = 'http://www.force.com/2009/06/asyncapi/dataload'
         self.jobs = {}  # dict of job_id => job_id
@@ -82,8 +86,9 @@ class SalesforceBulk(object):
         missing_env_vars = [e for e in env_vars if e not in os.environ]
         if missing_env_vars:
             raise RuntimeError(
-                "You must set {0} to use username/pass login".format(
-                    ', '.join(missing_env_vars)))
+                "You must set {0} to use username/pass "
+                "login".format(', '.join(missing_env_vars))
+            )
 
         try:
             import salesforce_oauth_request
@@ -91,18 +96,16 @@ class SalesforceBulk(object):
             raise ImportError(
                 "You must install salesforce-oauth-request to use username/password")
 
-        packet = salesforce_oauth_request.login(
-            username=username, password=password)
+        packet = salesforce_oauth_request.login(username=username,
+                                                password=password)
         return packet['access_token'], packet['instance_url']
 
     def headers(self, values={}):
         default = {"X-SFDC-Session": self.sessionId,
                    "Content-Type": "application/xml; charset=UTF-8"}
-        for k, val in values.iteritems():
-            default[k] = val
+        default.update(values)
         return default
 
-    # Register a new Bulk API job - returns the job id
     def create_query_job(self, object_name, **kwargs):
         return self.create_job(object_name, "query", **kwargs)
 
@@ -111,19 +114,24 @@ class SalesforceBulk(object):
 
     def create_update_job(self, object_name, **kwargs):
         return self.create_job(object_name, "update", **kwargs)
+    
+    def create_upsert_job(self, object_name, **kwargs):
+        assert('externalIdFieldName' in kwargs)
+        return self.create_job(object_name, "upsert", **kwargs)
 
     def create_delete_job(self, object_name, **kwargs):
         return self.create_job(object_name, "delete", **kwargs)
 
     def create_job(self, object_name=None, operation=None, contentType='CSV',
-                   concurrency=None):
+                   concurrency=None, externalIdFieldName=None):
         assert(object_name is not None)
         assert(operation is not None)
 
         doc = self.create_job_doc(object_name=object_name,
                                   operation=operation,
                                   contentType=contentType,
-                                  concurrency=concurrency)
+                                  concurrency=concurrency,
+                                  externalIdFieldName=externalIdFieldName)
 
         http = Http()
         resp, content = http.request(self.endpoint + "/services/async/29.0/job",
@@ -153,7 +161,8 @@ class SalesforceBulk(object):
         self.check_status(resp, content)
 
     def create_job_doc(self, object_name=None, operation=None,
-                       contentType='CSV', concurrency=None):
+                       contentType='CSV', concurrency=None,
+                       externalIdFieldName=None):
         root = ET.Element("jobInfo")
         root.set("xmlns", self.jobNS)
         op = ET.SubElement(root, "operation")
@@ -163,6 +172,9 @@ class SalesforceBulk(object):
         if concurrency:
             con = ET.SubElement(root, "concurrencyMode")
             con.text = concurrency
+        if externalIdFieldName:
+            eid = ET.SubElement(root, "externalIdFieldName")
+            eid.text = externalIdFieldName
         ct = ET.SubElement(root, "contentType")
         ct.text = contentType
 
@@ -183,7 +195,6 @@ class SalesforceBulk(object):
         tree.write(buf, encoding="UTF-8")
         return buf.getvalue()
 
-    # Add a BulkQuery to the job - returns the batch id
     def query(self, job_id, soql):
         if job_id is None:
             job_id = self.create_job(
@@ -412,8 +423,8 @@ class SalesforceBulk(object):
         if not parse_csv:
             iterator = resp.iter_lines()
         else:
-            iterator = csv.reader(resp.iter_lines(), delimiter=',',
-                                  quotechar='"')
+            iterator = csv.DictReader(resp.iter_lines(), delimiter=',',
+                                      quotechar='"')
 
         BATCH_SIZE = 5000
         for i, line in enumerate(iterator):
