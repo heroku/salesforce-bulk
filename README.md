@@ -25,7 +25,7 @@ those directly:
 
 ```
 from urlparse import urlparse
-from saleforce_bulk import SalesforceBulk
+from salesforce_bulk import SalesforceBulk
 
 bulk = SalesforceBulk(sessionId=sessionId, host=urlparse(instance_url).hostname)
 ...
@@ -49,7 +49,7 @@ Example
 
 ```
 job = bulk.create_query_job("Contact", contentType='CSV')
-batch = bulk.query("select Id,LastName from Contact")
+batch = bulk.query(job, "select Id,LastName from Contact")
 while not bulk.is_batch_done(job, batch):
 	sleep(10)
 bulk.close_job(job)
