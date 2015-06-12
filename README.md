@@ -14,7 +14,7 @@ will use the `salesforce-oauth-request` package (which you must install) to run
 the Salesforce OAUTH2 Web flow and return an access token.
 
 ```
-from saleforce_bulk import SalesforceBulk
+from salesforce_bulk import SalesforceBulk
 
 bulk = SalesforceBulk(username=username,password=password)
 ...
