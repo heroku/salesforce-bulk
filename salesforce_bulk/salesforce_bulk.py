@@ -403,7 +403,7 @@ class SalesforceBulk(object):
 
         tree = ET.fromstring(resp.content)
         return [str(r.text) for r in
-                tree.iterfind("{{{0}}}result".format(self.jobNS))]
+                tree.findall("{{{0}}}result".format(self.jobNS))]
 
     def get_batch_results(self, batch_id, result_id, job_id=None,
                           parse_csv=False, logger=None):
