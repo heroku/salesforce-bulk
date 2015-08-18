@@ -505,7 +505,7 @@ class SalesforceBulk(object):
         result_id = r.text.split("<result>")[1].split("</result>")[0]
 
         uri = self.endpoint + \
-            "/services/async/29.0/job/%s/batch/%s/result/%s" % (job_id, batch_id, result_id)
+            "/job/%s/batch/%s/result/%s" % (job_id, batch_id, result_id)
         r = requests.get(uri, headers=self.headers(), stream=True)
 
         if parse_csv:
