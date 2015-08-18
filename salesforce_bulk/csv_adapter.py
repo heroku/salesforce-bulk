@@ -22,10 +22,13 @@ class CsvDictsAdapter(object):
         self.buffer.seek(0)
 
         if not self.csv:
-            self.csv = csv.DictWriter(self.buffer, row.keys(), quoting = csv.QUOTE_NONNUMERIC)
-            self.csv.writeheader()
-        elif self.add_header:
-            self.csv.writeheader()
+            self.csv = csv.DictWriter(self.buffer, row.keys(), quoting=csv.QUOTE_NONNUMERIC)
+            self.add_header = True
+        if self.add_header:
+            if hasattr(self.csv, 'writeheader'):
+                self.csv.writeheader()
+            else:
+                self.csv.writerow(dict((fn, fn) for fn in self.csv.fieldnames))
             self.add_header = False
 
         self.csv.writerow(row)

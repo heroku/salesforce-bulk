@@ -402,8 +402,9 @@ class SalesforceBulk(object):
             return False
 
         tree = ET.fromstring(resp.content)
+        find_func = getattr(tree, 'iterfind', tree.findall)
         return [str(r.text) for r in
-                tree.iterfind("{{{0}}}result".format(self.jobNS))]
+                find_func("{{{0}}}result".format(self.jobNS))]
 
     def get_batch_results(self, batch_id, result_id, job_id=None,
                           parse_csv=False, logger=None):
@@ -459,7 +460,7 @@ class SalesforceBulk(object):
         uri = self.endpoint + \
             "/services/async/29.0/job/%s/batch/%s/result/%s" % (job_id, batch_id, result_id)
         r = requests.get(uri, headers=self.headers(), stream=True)
-        
+
         if parse_csv:
             return csv.DictReader(r.iter_lines(chunk_size=2048), delimiter=",",
                                   quotechar='"')
