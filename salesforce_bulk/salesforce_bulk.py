@@ -157,6 +157,19 @@ class SalesforceBulk(object):
                                      body=doc)
         self.check_status(resp, content)
 
+    def abort_job(self, job_id):
+        """Abort a given bulk job"""
+        doc = self.create_abort_job_doc()
+        http = Http()
+        url = self.endpoint + "/job/%s" % job_id
+        resp, content = http.request(
+            url,
+            "POST",
+            headers=self.headers(),
+            body=doc
+        )
+        self.check_status(resp, content)
+
     def create_job_doc(self, object_name=None, operation=None,
                        contentType='CSV', concurrency=None, external_id_name=None):
         root = ET.Element("jobInfo")
@@ -180,12 +193,23 @@ class SalesforceBulk(object):
         tree.write(buf, encoding="UTF-8")
         return buf.getvalue()
 
-    def create_close_job_doc(self, object_name=None, operation=None,
-                             contentType='CSV'):
+    def create_close_job_doc(self):
         root = ET.Element("jobInfo")
         root.set("xmlns", self.jobNS)
         state = ET.SubElement(root, "state")
         state.text = "Closed"
+
+        buf = StringIO.StringIO()
+        tree = ET.ElementTree(root)
+        tree.write(buf, encoding="UTF-8")
+        return buf.getvalue()
+
+    def create_abort_job_doc(self):
+        """Create XML doc for aborting a job"""
+        root = ET.Element("jobInfo")
+        root.set("xmlns", self.jobNS)
+        state = ET.SubElement(root, "state")
+        state.text = "Aborted"
 
         buf = StringIO.StringIO()
         tree = ET.ElementTree(root)
