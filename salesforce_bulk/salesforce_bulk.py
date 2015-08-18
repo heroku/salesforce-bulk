@@ -430,6 +430,29 @@ class SalesforceBulk(object):
         return [str(r.text) for r in
                 find_func("{{{0}}}result".format(self.jobNS))]
 
+    def get_all_results_for_batch(self, batch_id, job_id=None, parse_csv=False, logger=None):
+        """
+        Gets result ids and generates each result set from the batch and returns it
+        as an generator fetching the next result set when needed
+
+        Args:
+            batch_id: id of batch
+            job_id: id of job, if not provided, it will be looked up
+            parse_csv: if true, results will be dictionaries instead of lines
+        """
+        result_ids = self.get_batch_result_ids(batch_id, job_id=job_id)
+        if not result_ids:
+            if logger:
+                logger.error('Batch is not complete, may have timed out. '
+                             'batch_id: %s, job_id: %s', batch_id, job_id)
+            raise RuntimeError('Batch is not complete')
+        for result_id in result_ids:
+            yield self.get_batch_results(
+                batch_id,
+                result_id,
+                job_id=job_id,
+                parse_csv=parse_csv)
+
     def get_batch_results(self, batch_id, result_id, job_id=None,
                           parse_csv=False, logger=None):
         job_id = job_id or self.lookup_job_id(batch_id)
