@@ -50,7 +50,7 @@ class BulkBatchFailed(BulkApiError):
 
 class SalesforceBulk(object):
 
-    def __init__(self, sessionId=None, host=None, username=None, password=None,
+    def __init__(self, sessionId=None, host=None, username=None, sandbox=False password=None,
                  exception_class=BulkApiError, API_version="29.0"):
         if not sessionId and not username:
             raise RuntimeError(
@@ -74,7 +74,7 @@ class SalesforceBulk(object):
         self.exception_class = exception_class
 
     @staticmethod
-    def login_to_salesforce(username, password):
+    def login_to_salesforce(username, password, sandbox=False):
         env_vars = (
             'SALESFORCE_CLIENT_ID',
             'SALESFORCE_CLIENT_SECRET',
@@ -93,7 +93,7 @@ class SalesforceBulk(object):
                 "You must install salesforce-oauth-request to use username/password")
 
         packet = salesforce_oauth_request.login(
-            username=username, password=password)
+            username=username, password=password, sandbox=sandbox)
         return packet['access_token'], packet['instance_url']
 
     def headers(self, values={}):
