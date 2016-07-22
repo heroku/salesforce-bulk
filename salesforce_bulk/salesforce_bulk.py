@@ -14,6 +14,7 @@ import StringIO
 import re
 import time
 import csv
+import json
 
 from . import bulk_states
 
@@ -123,7 +124,6 @@ class SalesforceBulk(object):
                    concurrency=None, external_id_name=None):
         assert(object_name is not None)
         assert(operation is not None)
-
         doc = self.create_job_doc(object_name=object_name,
                                   operation=operation,
                                   contentType=contentType,
@@ -257,13 +257,13 @@ class SalesforceBulk(object):
         return batches
 
     # Add a BulkUpload to the job - returns the batch id
-    def bulk_csv_upload(self, job_id, csv, batch_size=2500):
+    def bulk_csv_upload(self, job_id, csv, batch_size=2500, contentType="text/csv"):
         # Split a large CSV into manageable batches
         batches = self.split_csv(csv, batch_size)
         batch_ids = []
 
         uri = self.endpoint + "/job/%s/batch" % job_id
-        headers = self.headers({"Content-Type": "text/csv"})
+        headers = self.headers({"Content-Type": contentType})
         for batch in batches:
             resp = requests.post(uri, data=batch, headers=headers)
             content = resp.content
@@ -288,9 +288,9 @@ class SalesforceBulk(object):
         else:
             raise self.exception_class(message)
 
-    def post_bulk_batch(self, job_id, csv_generator):
+    def post_bulk_batch(self, job_id, csv_generator, contentType="text/csv"):
         uri = self.endpoint + "/job/%s/batch" % job_id
-        headers = self.headers({"Content-Type": "text/csv"})
+        headers = self.headers({"Content-Type": contentType})
         resp = requests.post(uri, data=csv_generator, headers=headers)
         content = resp.content
 
