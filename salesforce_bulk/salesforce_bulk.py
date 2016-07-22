@@ -297,8 +297,11 @@ class SalesforceBulk(object):
         if resp.status_code >= 400:
             self.raise_error(content, resp.status_code)
 
-        tree = ET.fromstring(content)
-        batch_id = tree.findtext("{%s}id" % self.jobNS)
+        if (contentType == "JSON" or contentType == "application/json"):
+            batch_id = json.loads(content)['id']
+        else:
+            tree = ET.fromstring(content)
+            batch_id = tree.findtext("{%s}id" % self.jobNS)
         return batch_id
 
     # Add a BulkDelete to the job - returns the batch id
@@ -380,12 +383,16 @@ class SalesforceBulk(object):
         resp, content = http.request(uri, headers=self.headers())
         self.check_status(resp, content)
 
-        tree = ET.fromstring(content)
-        result = {}
-        for child in tree:
-            result[re.sub("{.*?}", "", child.tag)] = child.text
 
-        self.batch_statuses[batch_id] = result
+        if self.headers()['Content-Type'] in ('application/json', 'JSON', 'application/xml; charset=UTF-8'):
+            result = json.loads(content)
+        else:
+            tree = ET.fromstring(content)
+            result = {}
+            for child in tree:
+                result[re.sub("{.*?}", "", child.tag)] = child.text
+
+            self.batch_statuses[batch_id] = result
         return result
 
     def batch_state(self, job_id, batch_id, reload=False):
