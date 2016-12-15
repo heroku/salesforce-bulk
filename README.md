@@ -1,3 +1,5 @@
+### Note: This library is NOT actively maintained and has a bunch of issues that have NOT been fixed. This may result in failure to use this library. Have a look at [salesforce-bulkipy](https://github.com/wingify/salesforce-bulkipy), a fork of this library which works, is tested, updated and supports more features.
+
 # Salesforce Bulk
 
 Python client library for accessing the asynchronous Salesforce.com Bulk API.
