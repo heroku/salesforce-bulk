@@ -14,6 +14,7 @@ import StringIO
 import re
 import time
 import csv
+import json
 
 from . import bulk_states
 
@@ -123,7 +124,6 @@ class SalesforceBulk(object):
                    concurrency=None, external_id_name=None):
         assert(object_name is not None)
         assert(operation is not None)
-
         doc = self.create_job_doc(object_name=object_name,
                                   operation=operation,
                                   contentType=contentType,
@@ -257,13 +257,13 @@ class SalesforceBulk(object):
         return batches
 
     # Add a BulkUpload to the job - returns the batch id
-    def bulk_csv_upload(self, job_id, csv, batch_size=2500):
+    def bulk_csv_upload(self, job_id, csv, batch_size=2500, contentType="text/csv"):
         # Split a large CSV into manageable batches
         batches = self.split_csv(csv, batch_size)
         batch_ids = []
 
         uri = self.endpoint + "/job/%s/batch" % job_id
-        headers = self.headers({"Content-Type": "text/csv"})
+        headers = self.headers({"Content-Type": contentType})
         for batch in batches:
             resp = requests.post(uri, data=batch, headers=headers)
             content = resp.content
@@ -288,17 +288,20 @@ class SalesforceBulk(object):
         else:
             raise self.exception_class(message)
 
-    def post_bulk_batch(self, job_id, csv_generator):
+    def post_bulk_batch(self, job_id, csv_generator, contentType="text/csv"):
         uri = self.endpoint + "/job/%s/batch" % job_id
-        headers = self.headers({"Content-Type": "text/csv"})
+        headers = self.headers({"Content-Type": contentType})
         resp = requests.post(uri, data=csv_generator, headers=headers)
         content = resp.content
 
         if resp.status_code >= 400:
             self.raise_error(content, resp.status_code)
 
-        tree = ET.fromstring(content)
-        batch_id = tree.findtext("{%s}id" % self.jobNS)
+        if (contentType == "JSON" or contentType == "application/json"):
+            batch_id = json.loads(content)['id']
+        else:
+            tree = ET.fromstring(content)
+            batch_id = tree.findtext("{%s}id" % self.jobNS)
         return batch_id
 
     # Add a BulkDelete to the job - returns the batch id
@@ -380,12 +383,16 @@ class SalesforceBulk(object):
         resp, content = http.request(uri, headers=self.headers())
         self.check_status(resp, content)
 
-        tree = ET.fromstring(content)
-        result = {}
-        for child in tree:
-            result[re.sub("{.*?}", "", child.tag)] = child.text
 
-        self.batch_statuses[batch_id] = result
+        if self.headers()['Content-Type'] in ('application/json', 'JSON', 'application/xml; charset=UTF-8'):
+            result = json.loads(content)
+        else:
+            tree = ET.fromstring(content)
+            result = {}
+            for child in tree:
+                result[re.sub("{.*?}", "", child.tag)] = child.text
+
+            self.batch_statuses[batch_id] = result
         return result
 
     def batch_state(self, job_id, batch_id, reload=False):
