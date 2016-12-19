@@ -19,6 +19,7 @@ packages = [
 requires = [
     'httplib2>=0.7.5',
     'requests>=2.2.1',
+    'unicodecsv>=0.13.0',
 ]
 
 with open('README.md') as f:
