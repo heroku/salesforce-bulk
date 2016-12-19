@@ -314,7 +314,7 @@ class SalesforceBulk(object):
             results.append(tf.read())
 
         flag = self.get_batch_results(
-            query_job_id, query_batch_id, callback=save_results)
+            query_job_id, query_batch_id)
 
         if job_id is None:
             job_id = self.create_job(object_type, "delete")
