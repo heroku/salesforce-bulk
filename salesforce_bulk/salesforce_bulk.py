@@ -509,7 +509,7 @@ class SalesforceBulk(object):
         r = requests.get(uri, headers=self.headers(), stream=True)
 
         if parse_csv:
-            return csv.DictReader(r.iter_lines(chunk_size=2048), delimiter=",",
+            return csv.DictReader((x.replace('\0', '') for x in r.iter_lines(chunk_size=2048)), delimiter=",",
                                   quotechar='"')
         else:
             return r.iter_lines(chunk_size=2048)
