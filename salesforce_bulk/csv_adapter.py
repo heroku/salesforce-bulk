@@ -1,5 +1,5 @@
 import unicodecsv as csv
-from cStringIO import StringIO
+from io import StringIO
 
 class CsvDictsAdapter(object):
     """Provide a DataChange generator and it provides a file-like object which returns csv data"""
@@ -15,14 +15,14 @@ class CsvDictsAdapter(object):
     def write_header(self):
         self.add_header = True
 
-    def next(self):
-        row = self.source.next()
+    def __next__(self):
+        row = next(self.source)
 
         self.buffer.truncate(0)
         self.buffer.seek(0)
 
         if not self.csv:
-            self.csv = csv.DictWriter(self.buffer, row.keys(), quoting=csv.QUOTE_NONNUMERIC)
+            self.csv = csv.DictWriter(self.buffer, list(row.keys()), quoting=csv.QUOTE_NONNUMERIC)
             self.add_header = True
         if self.add_header:
             if hasattr(self.csv, 'writeheader'):
