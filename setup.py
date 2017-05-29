@@ -17,7 +17,6 @@ packages = [
 ]
 
 requires = [
-    'httplib2>=0.7.5',
     'requests>=2.2.1',
     'unicodecsv>=0.13.0',
 ]
@@ -29,7 +28,7 @@ with open('LICENSE') as f:
 
 setup(
     name='salesforce-bulk',
-    version='1.1.0',
+    version='2.0.0dev1',
     description='Python interface to the Salesforce.com Bulk API.',
     long_description=readme,
     author='Scott Persinger',
