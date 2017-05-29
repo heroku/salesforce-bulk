@@ -1,3 +1,5 @@
+from __future__ import absolute_import
+from __future__ import print_function
 import re
 import time
 import unittest
@@ -5,6 +7,8 @@ import unittest
 import salesforce_oauth_request
 
 from salesforce_bulk import SalesforceBulk
+from six.moves import range
+from six.moves import input
 
 class SalesforceBulkTest(unittest.TestCase):
     def __init__(self, testName, endpoint, sessionId):
@@ -18,7 +22,7 @@ class SalesforceBulkTest(unittest.TestCase):
     def tearDown(self):
         if hasattr(self, 'bulk'):
             for job_id in self.jobs:
-                print "Closing job: %s" % job_id
+                print("Closing job: %s" % job_id)
                 self.bulk.close_job(job_id)
 
     def test_raw_query(self):
@@ -33,13 +37,13 @@ class SalesforceBulkTest(unittest.TestCase):
         self.assertIsNotNone(re.match("\w+", batch_id))
 
         while not bulk.is_batch_done(job_id, batch_id):
-            print "Job not done yet..."
-            print bulk.batch_status(job_id, batch_id)
+            print("Job not done yet...")
+            print(bulk.batch_status(job_id, batch_id))
             time.sleep(2)
 
         self.results = ""
         def save_results(tfile, **kwargs):
-            print "in save results"
+            print("in save results")
             self.results = tfile.read()
 
         flag = bulk.get_batch_results(job_id, batch_id, callback = save_results)
@@ -76,7 +80,7 @@ class SalesforceBulkTest(unittest.TestCase):
         self.callback_count = 0
         def save_results2(rows, **kwargs):
             self.results = rows
-            print rows
+            print(rows)
             self.callback_count += 1
 
         batch = len(results) / 3
@@ -129,8 +133,8 @@ class SalesforceBulkTest(unittest.TestCase):
 
 
 if __name__ == '__main__':
-    username = raw_input("Salesforce username: ")
-    password = raw_input("Salesforce password: ")
+    username = input("Salesforce username: ")
+    password = input("Salesforce password: ")
 
     login = salesforce_oauth_request.login(username=username, password=password, cache_session=True)
     endpoint = login['endpoint']

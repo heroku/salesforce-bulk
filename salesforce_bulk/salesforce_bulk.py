@@ -1,14 +1,18 @@
+# Interface to the Salesforce BULK API
 from __future__ import absolute_import
 
-# Interface to the Salesforce BULK API
 import os
 from collections import namedtuple
-import requests
-import urlparse
+try:
+    import urlparse
+except ImportError:
+    import urllib.parse as urlparse
 import xml.etree.ElementTree as ET
-import StringIO
+from six import StringIO
 import re
 import time
+
+import requests
 
 from . import bulk_states
 
@@ -102,8 +106,7 @@ class SalesforceBulk(object):
     def headers(self, values={}, content_type='application/xml'):
         default = {"X-SFDC-Session": self.sessionId,
                    "Content-Type": "{}; charset=UTF-8".format(content_type)}
-        for k, val in values.iteritems():
-            default[k] = val
+        default.update(values)
         return default
 
     # Register a new Bulk API job - returns the job id
@@ -185,7 +188,7 @@ class SalesforceBulk(object):
         ct = ET.SubElement(root, "contentType")
         ct.text = contentType
 
-        buf = StringIO.StringIO()
+        buf = StringIO()
         tree = ET.ElementTree(root)
         tree.write(buf, encoding="UTF-8")
         return buf.getvalue()
@@ -196,7 +199,7 @@ class SalesforceBulk(object):
         state = ET.SubElement(root, "state")
         state.text = "Closed"
 
-        buf = StringIO.StringIO()
+        buf = StringIO()
         tree = ET.ElementTree(root)
         tree.write(buf, encoding="UTF-8")
         return buf.getvalue()
@@ -208,7 +211,7 @@ class SalesforceBulk(object):
         state = ET.SubElement(root, "state")
         state.text = "Aborted"
 
-        buf = StringIO.StringIO()
+        buf = StringIO()
         tree = ET.ElementTree(root)
         tree.write(buf, encoding="UTF-8")
         return buf.getvalue()
@@ -253,10 +256,9 @@ class SalesforceBulk(object):
         uri = self.endpoint + "/job/%s/batch" % job_id
         headers = self.headers(content_type=http_content_type)
         resp = requests.post(uri, data=data_generator, headers=headers)
-        content = resp.content
+        self.check_status(resp)
 
-        if resp.status_code >= 400:
-            self.raise_error(content, resp.status_code)
+        content = resp.content
 
         tree = ET.fromstring(content)
         batch_id = tree.findtext("{%s}id" % self.jobNS)
@@ -274,8 +276,6 @@ class SalesforceBulk(object):
         uri = urlparse.urljoin(self.endpoint + "/", 'job/{0}'.format(job_id))
         response = requests.get(uri, headers=self.headers())
         self.check_status(response)
-        if response.status_code != 200:
-            self.raise_error(response.content, response.status_code)
 
         tree = ET.fromstring(response.content)
         result = {}
