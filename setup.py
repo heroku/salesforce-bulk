@@ -21,6 +21,7 @@ requires = [
     'six',
     'requests>=2.2.1',
     'unicodecsv>=0.13.0',
+    'simple-salesforce>=69'
 ]
 
 with open('README.md') as f:

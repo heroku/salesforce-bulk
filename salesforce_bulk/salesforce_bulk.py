@@ -13,6 +13,7 @@ import re
 import time
 
 import requests
+from simple_salesforce import SalesforceLogin
 
 from . import bulk_states
 
@@ -53,19 +54,22 @@ job_to_http_content_type = {
     'JSON', 'application/json',
 }
 
+DEFAULT_CLIENT_ID_PREFIX = 'PySFBulk'
+DEFAULT_API_VERSION = "39.0"
+
 
 class SalesforceBulk(object):
 
     def __init__(self, sessionId=None, host=None, username=None, password=None,
-                 exception_class=BulkApiError, API_version="39.0", sandbox=False):
+                 API_version=DEFAULT_API_VERSION, sandbox=False,
+                 security_token=None, organizationId=None, client_id=None):
         if not sessionId and not username:
             raise RuntimeError(
                 "Must supply either sessionId/instance_url or username/password")
         if not sessionId:
-            sessionId, endpoint = SalesforceBulk.login_to_salesforce(
-                username, password, sandbox=sandbox)
-            host = urlparse.urlparse(endpoint)
-            host = host.hostname.replace("-api", "")
+            sessionId, host = SalesforceBulk.login_to_salesforce(
+                username, password, sandbox=sandbox, security_token=security_token,
+                organizationId=organizationId, API_version=API_version, client_id=client_id)
 
         if host[0:4] == 'http':
             self.endpoint = host
@@ -81,27 +85,43 @@ class SalesforceBulk(object):
         self.exception_class = exception_class
 
     @staticmethod
-    def login_to_salesforce(username, password, sandbox=False):
-        env_vars = (
-            'SALESFORCE_CLIENT_ID',
-            'SALESFORCE_CLIENT_SECRET',
-            'SALESFORCE_REDIRECT_URI',
-        )
-        missing_env_vars = [e for e in env_vars if e not in os.environ]
-        if missing_env_vars:
-            raise RuntimeError(
-                "You must set {0} to use username/pass login".format(
-                    ', '.join(missing_env_vars)))
+    def login_to_salesforce(username, password, sandbox=False, security_token=None,
+                            organizationId=None, client_id=None, API_version=DEFAULT_API_VERSION):
+        if client_id:
+            client_id = "{prefix}/{app_name}".format(
+                prefix=DEFAULT_CLIENT_ID_PREFIX,
+                app_name=client_id)
+        else:
+            client_id = DEFAULT_CLIENT_ID_PREFIX
 
-        try:
-            import salesforce_oauth_request
-        except ImportError:
-            raise ImportError(
-                "You must install salesforce-oauth-request to use username/password")
+        if all(arg is not None for arg in (
+                username, password, security_token)):
 
-        packet = salesforce_oauth_request.login(
-            username=username, password=password, sandbox=sandbox)
-        return packet['access_token'], packet['instance_url']
+            # Pass along the username/password to our login helper
+            return SalesforceLogin(
+                username=username,
+                password=password,
+                security_token=security_token,
+                sandbox=sandbox,
+                sf_version=API_version,
+                client_id=client_id)
+
+        elif all(arg is not None for arg in (
+                username, password, organizationId)):
+
+            # Pass along the username/password to our login helper
+            return SalesforceLogin(
+                username=username,
+                password=password,
+                organizationId=organizationId,
+                sandbox=sandbox,
+                sf_version=API_version,
+                client_id=client_id)
+
+        else:
+            raise TypeError(
+                'You must provide login information or an instance and token'
+            )
 
     def headers(self, values={}, content_type='application/xml'):
         default = {"X-SFDC-Session": self.sessionId,
