@@ -191,7 +191,7 @@ class SalesforceBulk(object):
 
         buf = io.StringIO()
         tree = ET.ElementTree(root)
-        tree.write(buf, encoding="UTF-8")
+        tree.write(buf)
         return buf.getvalue()
 
     def create_close_job_doc(self):
@@ -202,7 +202,7 @@ class SalesforceBulk(object):
 
         buf = io.StringIO()
         tree = ET.ElementTree(root)
-        tree.write(buf, encoding="UTF-8")
+        tree.write(buf)
         return buf.getvalue()
 
     def create_abort_job_doc(self):
@@ -214,7 +214,7 @@ class SalesforceBulk(object):
 
         buf = io.StringIO()
         tree = ET.ElementTree(root)
-        tree.write(buf, encoding="UTF-8")
+        tree.write(buf)
         return buf.getvalue()
 
     # Add a BulkQuery to the job - returns the batch id
