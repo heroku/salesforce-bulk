@@ -189,10 +189,10 @@ class SalesforceBulk(object):
         ct = ET.SubElement(root, "contentType")
         ct.text = contentType
 
-        buf = io.StringIO()
+        buf = io.BytesIO()
         tree = ET.ElementTree(root)
         tree.write(buf)
-        return buf.getvalue()
+        return buf.getvalue().decode('utf-8')
 
     def create_close_job_doc(self):
         root = ET.Element("jobInfo")
@@ -200,10 +200,10 @@ class SalesforceBulk(object):
         state = ET.SubElement(root, "state")
         state.text = "Closed"
 
-        buf = io.StringIO()
+        buf = io.BytesIO()
         tree = ET.ElementTree(root)
         tree.write(buf)
-        return buf.getvalue()
+        return buf.getvalue().decode('utf-8')
 
     def create_abort_job_doc(self):
         """Create XML doc for aborting a job"""
@@ -212,10 +212,10 @@ class SalesforceBulk(object):
         state = ET.SubElement(root, "state")
         state.text = "Aborted"
 
-        buf = io.StringIO()
+        buf = io.BytesIO()
         tree = ET.ElementTree(root)
         tree.write(buf)
-        return buf.getvalue()
+        return buf.getvalue().decode('utf-8')
 
     # Add a BulkQuery to the job - returns the batch id
     def query(self, job_id, soql):
@@ -239,7 +239,7 @@ class SalesforceBulk(object):
         return batch_id
 
     def split_csv(self, csv, batch_size):
-        csv_io = io.StringIO(csv)
+        csv_io = io.BytesIO(csv)
         batches = []
 
         for i, line in enumerate(csv_io):
