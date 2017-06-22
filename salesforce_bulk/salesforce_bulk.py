@@ -1,16 +1,17 @@
-from __future__ import absolute_import
+
 
 # Interface to the Salesforce BULK API
-import os
 from collections import namedtuple
 from httplib2 import Http
+from tempfile import TemporaryFile
+
+import os
 import requests
-import urllib2
-import urlparse
-import requests
+import urllib.request
+import urllib.error
+import urllib.parse
 import xml.etree.ElementTree as ET
-from tempfile import TemporaryFile, NamedTemporaryFile
-import StringIO
+import io
 import re
 import time
 import csv
@@ -58,7 +59,7 @@ class SalesforceBulk(object):
         if not sessionId:
             sessionId, endpoint = SalesforceBulk.login_to_salesforce(
                 username, password, sandbox=sandbox)
-            host = urlparse.urlparse(endpoint)
+            host = urllib.parse.urlparse(endpoint)
             host = host.hostname.replace("-api", "")
 
         if host[0:4] == 'http':
@@ -99,7 +100,7 @@ class SalesforceBulk(object):
     def headers(self, values={}):
         default = {"X-SFDC-Session": self.sessionId,
                    "Content-Type": "application/xml; charset=UTF-8"}
-        for k, val in values.iteritems():
+        for k, val in values.items():
             default[k] = val
         return default
 
@@ -188,10 +189,10 @@ class SalesforceBulk(object):
         ct = ET.SubElement(root, "contentType")
         ct.text = contentType
 
-        buf = StringIO.StringIO()
+        buf = io.BytesIO()
         tree = ET.ElementTree(root)
-        tree.write(buf, encoding="UTF-8")
-        return buf.getvalue()
+        tree.write(buf)
+        return buf.getvalue().decode('utf-8')
 
     def create_close_job_doc(self):
         root = ET.Element("jobInfo")
@@ -199,10 +200,10 @@ class SalesforceBulk(object):
         state = ET.SubElement(root, "state")
         state.text = "Closed"
 
-        buf = StringIO.StringIO()
+        buf = io.BytesIO()
         tree = ET.ElementTree(root)
-        tree.write(buf, encoding="UTF-8")
-        return buf.getvalue()
+        tree.write(buf)
+        return buf.getvalue().decode('utf-8')
 
     def create_abort_job_doc(self):
         """Create XML doc for aborting a job"""
@@ -211,10 +212,10 @@ class SalesforceBulk(object):
         state = ET.SubElement(root, "state")
         state.text = "Aborted"
 
-        buf = StringIO.StringIO()
+        buf = io.BytesIO()
         tree = ET.ElementTree(root)
-        tree.write(buf, encoding="UTF-8")
-        return buf.getvalue()
+        tree.write(buf)
+        return buf.getvalue().decode('utf-8')
 
     # Add a BulkQuery to the job - returns the batch id
     def query(self, job_id, soql):
@@ -238,7 +239,7 @@ class SalesforceBulk(object):
         return batch_id
 
     def split_csv(self, csv, batch_size):
-        csv_io = StringIO.StringIO(csv)
+        csv_io = io.BytesIO(csv)
         batches = []
 
         for i, line in enumerate(csv_io):
@@ -349,7 +350,7 @@ class SalesforceBulk(object):
 
     def job_status(self, job_id=None):
         job_id = job_id or self.lookup_job_id(batch_id)
-        uri = urlparse.urljoin(self.endpoint +"/",
+        uri = urllib.parse.urljoin(self.endpoint +"/",
             'job/{0}'.format(job_id))
         response = requests.get(uri, headers=self.headers())
         if response.status_code != 200:
@@ -416,7 +417,7 @@ class SalesforceBulk(object):
         if not self.is_batch_done(job_id, batch_id):
             return False
 
-        uri = urlparse.urljoin(
+        uri = urllib.parse.urljoin(
             self.endpoint + "/",
             "job/{0}/batch/{1}/result".format(
                 job_id, batch_id),
@@ -458,7 +459,7 @@ class SalesforceBulk(object):
         job_id = job_id or self.lookup_job_id(batch_id)
         logger = logger or (lambda message: None)
 
-        uri = urlparse.urljoin(
+        uri = urllib.parse.urljoin(
             self.endpoint + "/",
             "job/{0}/batch/{1}/result/{2}".format(
                 job_id, batch_id, result_id),
@@ -509,8 +510,9 @@ class SalesforceBulk(object):
         r = requests.get(uri, headers=self.headers(), stream=True)
 
         if parse_csv:
-            return csv.DictReader(r.iter_lines(chunk_size=2048), delimiter=",",
-                                  quotechar='"')
+            r_iter_lines = (row.decode('utf-8') for row
+                            in r.iter_lines(chunk_size=2048))
+            return csv.DictReader(r_iter_lines, delimiter=",", quotechar='"')
         else:
             return r.iter_lines(chunk_size=2048)
 
