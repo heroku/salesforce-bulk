@@ -16,7 +16,17 @@ from six.moves import input
 
 import unicodecsv
 
-from salesforce_bulk import SalesforceBulk
+from salesforce_bulk import SalesforceBulk, BulkApiError
+from salesforce_bulk import CsvDictsAdapter
+
+
+def batches(iterator, n=10000):
+    while True:
+        batch = list(islice(iterator, n))
+        if not batch:
+            return
+
+        yield batch
 
 class SalesforceBulkTests(unittest.TestCase):
 
@@ -52,9 +62,29 @@ class SalesforceBulkIntegrationTest(unittest.TestCase):
 
     def tearDown(self):
         if hasattr(self, 'bulk'):
+            job_id = self.bulk.create_query_job("Contact")
+            self.jobs.append(job_id)
+            batch_id = self.bulk.query(job_id, "SELECT Id FROM Contact WHERE FirstName LIKE 'BulkTestFirst%'")
+            self.bulk.close_job(job_id)
+            results = self.bulk.get_all_results_for_query_batch(batch_id)
+            results = (record for result in results
+                       for record in unicodecsv.DictReader(result, encoding='utf-8'))
+            
+            job_id = self.bulk.create_delete_job('Contact')
+            self.jobs.append(job_id)
+            
+            for batch in batches(results):
+                content = CsvDictsAdapter(iter(batch))
+                self.bulk.post_batch(job_id, content)
+
+            self.bulk.close_job(job_id)
+
             for job_id in self.jobs:
                 print("Closing job: %s" % job_id)
-                self.bulk.close_job(job_id)
+                try:
+                    self.bulk.close_job(job_id)
+                except BulkApiError:
+                    pass
 
     def test_raw_query(self):
         bulk = SalesforceBulk(self.sessionId, self.endpoint)
@@ -73,7 +103,7 @@ class SalesforceBulkIntegrationTest(unittest.TestCase):
             time.sleep(2)
 
         all_results = []
-        results = bulk.get_all_results_for_batch(batch_id)
+        results = bulk.get_all_results_for_query_batch(batch_id)
         for result in results:
             reader = unicodecsv.DictReader(result, encoding='utf-8')
             all_results.extend(reader)
@@ -91,35 +121,30 @@ class SalesforceBulkIntegrationTest(unittest.TestCase):
         self.assertIsNotNone(re.match("\w+", job_id))
 
         batch_ids = []
-        content = open("example.csv").read()
+        data = [
+            {
+                'FirstName': 'BulkTestFirst%s' % i,
+                'LastName': 'BulkLastName',
+                'Phone': '555-555-5555',
+            } for i in range(50)
+        ]
         for i in range(5):
-            batch_id = bulk.query(job_id, content)
+            content = CsvDictsAdapter(iter(data))
+            batch_id = bulk.post_batch(job_id, content)
             self.assertIsNotNone(re.match("\w+", batch_id))
             batch_ids.append(batch_id)
+
+        bulk.close_job(job_id)
 
         for batch_id in batch_ids:
             bulk.wait_for_batch(job_id, batch_id, timeout=120)
 
-        self.results = None
-        def save_results1(rows, failed, remaining):
-            self.results = rows
-
         for batch_id in batch_ids:
-            flag = bulk.get_upload_results(job_id, batch_id, callback = save_results1)
-            self.assertTrue(flag)
-            results = self.results
+            batch_result = bulk.get_batch_results(batch_id)
+            reader = unicodecsv.DictReader(batch_result, encoding='utf-8')
+            results = list(reader)
+
             self.assertTrue(len(results) > 0)
             self.assertTrue(isinstance(results,list))
-            self.assertEqual(results[0], UploadResult('Id','Success','Created','Error'))
-            self.assertEqual(len(results), 3)
-
-        self.results = None
-        self.callback_count = 0
-        def save_results2(rows, failed, remaining):
-            self.results = rows
-            self.callback_count += 1
-
-        batch = len(results) / 3
-        self.callback_count = 0
-        flag = bulk.get_upload_results(job_id, batch_id, callback = save_results2, batch_size=batch)
-        self.assertTrue(self.callback_count >= 3)
+            self.assertEqual(sorted(results[0].keys()), ['Created', 'Error', 'Id','Success'])
+            self.assertEqual(len(results), 50)

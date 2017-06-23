@@ -55,7 +55,7 @@ bulk.close_job(job)
 while not bulk.is_batch_done(batch):
 	sleep(10)
 
-for result in bulk.get_all_results_for_batch(batch):
+for result in bulk.get_all_results_for_query_batch(batch):
 	with unicodecsv.DictReader(result, encoding='utf-8') as reader:
         for row in reader:
             print row # dictionary rows
@@ -71,7 +71,7 @@ bulk.close_job(job)
 while not bulk.is_batch_done(batch):
 	sleep(10)
 
-for result in bulk.get_all_results_for_batch(batch):
+for result in bulk.get_all_results_for_query_batch(batch):
     result = json.load(IteratorBytesIO(result))
     for row in result:
         print row # dictionary rows

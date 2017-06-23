@@ -17,8 +17,6 @@ from simple_salesforce import SalesforceLogin
 
 from . import bulk_states
 
-UploadResult = namedtuple('UploadResult', 'id success created error')
-
 
 class BulkApiError(Exception):
 
@@ -283,6 +281,7 @@ class SalesforceBulk(object):
 
         tree = ET.fromstring(content)
         batch_id = tree.findtext("{%s}id" % self.jobNS)
+        self.batches[batch_id] = job_id
         return batch_id
 
     def lookup_job_id(self, batch_id):
@@ -353,7 +352,7 @@ class SalesforceBulk(object):
             time.sleep(sleep_interval)
             waited += sleep_interval
 
-    def get_batch_result_ids(self, batch_id, job_id=None):
+    def get_query_batch_result_ids(self, batch_id, job_id=None):
         job_id = job_id or self.lookup_job_id(batch_id)
         if not self.is_batch_done(batch_id, job_id):
             return False
@@ -372,7 +371,7 @@ class SalesforceBulk(object):
         return [str(r.text) for r in
                 find_func("{{{0}}}result".format(self.jobNS))]
 
-    def get_all_results_for_batch(self, batch_id, job_id=None, chunk_size=None):
+    def get_all_results_for_query_batch(self, batch_id, job_id=None, chunk_size=None):
         """
         Gets result ids and generates each result set from the batch and returns it
         as an generator fetching the next result set when needed
@@ -381,7 +380,7 @@ class SalesforceBulk(object):
             batch_id: id of batch
             job_id: id of job, if not provided, it will be looked up
         """
-        result_ids = self.get_batch_result_ids(batch_id, job_id=job_id)
+        result_ids = self.get_query_batch_result_ids(batch_id, job_id=job_id)
         if not result_ids:
             raise RuntimeError('Batch is not complete')
         for result_id in result_ids:
@@ -390,14 +389,17 @@ class SalesforceBulk(object):
                 result_id,
                 job_id=job_id)
 
-    def get_batch_results(self, batch_id, result_id, job_id=None, chunk_size=None):
+    def get_batch_results(self, batch_id, result_id=None, job_id=None, chunk_size=None):
         job_id = job_id or self.lookup_job_id(batch_id)
 
         uri = urlparse.urljoin(
             self.endpoint + "/",
-            "job/{0}/batch/{1}/result/{2}".format(
-                job_id, batch_id, result_id),
+            "job/{0}/batch/{1}/result".format(
+                job_id, batch_id),
         )
+        if result_id:
+            uri = uri + '/' + result_id
+
         resp = requests.get(uri, headers=self.headers(), stream=True)
         self.check_status(resp)
 
