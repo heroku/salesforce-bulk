@@ -11,6 +11,8 @@ try:
 except ImportError:
     import unittest
 
+from itertools import islice
+
 from six.moves import range
 from six.moves import input
 
@@ -35,6 +37,7 @@ class SalesforceBulkTests(unittest.TestCase):
         request_patcher = patch('simple_salesforce.api.requests')
         self.mockrequest = request_patcher.start()
         self.addCleanup(request_patcher.stop)
+        self.bulk = Salesforce('12345', 'https://example.com')
 
 
 class SalesforceBulkIntegrationTest(unittest.TestCase):
