@@ -49,9 +49,9 @@ class BulkBatchFailed(BulkApiError):
 
 
 job_to_http_content_type = {
-    'CSV', 'text/csv',
-    'XML', 'application/xml',
-    'JSON', 'application/json',
+    'CSV': 'text/csv',
+    'XML': 'application/xml',
+    'JSON': 'application/json',
 }
 
 DEFAULT_CLIENT_ID_PREFIX = 'PySFBulk'
@@ -82,7 +82,7 @@ class SalesforceBulk(object):
         self.batches = {}  # dict of batch_id => job_id
         self.job_content_types = {}  # dict of job_id => contentType
         self.batch_statuses = {}
-        self.exception_class = exception_class
+        self.API_version = API_version
 
     @staticmethod
     def login_to_salesforce(username, password, sandbox=False, security_token=None,
@@ -133,6 +133,10 @@ class SalesforceBulk(object):
     def create_query_job(self, object_name, **kwargs):
         return self.create_job(object_name, "query", **kwargs)
 
+    def create_queryall_job(self, object_name, **kwargs):
+        """ only supported since version 39.0 """
+        return self.create_job(object_bname, "queryAll", **kwargs)
+
     def create_insert_job(self, object_name, **kwargs):
         return self.create_job(object_name, "insert", **kwargs)
 
@@ -161,7 +165,7 @@ class SalesforceBulk(object):
                              data=doc)
         self.check_status(resp)
 
-        tree = ET.fromstring(resp.text)
+        tree = ET.fromstring(resp.content)
         job_id = tree.findtext("{%s}id" % self.jobNS)
         self.jobs[job_id] = job_id
         self.job_content_types[job_id] = contentType
@@ -169,9 +173,9 @@ class SalesforceBulk(object):
         return job_id
 
     def check_status(self, resp):
-        if resp.status >= 400:
+        if resp.status_code >= 400:
             msg = "Bulk API HTTP Error result: {0}".format(resp.text)
-            self.raise_error(msg, resp.status)
+            self.raise_error(msg, resp.status_code)
 
     def close_job(self, job_id):
         doc = self.create_close_job_doc()
@@ -253,7 +257,7 @@ class SalesforceBulk(object):
 
         self.check_status(resp)
 
-        tree = ET.fromstring(self.text)
+        tree = ET.fromstring(resp.content)
         batch_id = tree.findtext("{%s}id" % self.jobNS)
 
         self.batches[batch_id] = job_id
@@ -264,10 +268,7 @@ class SalesforceBulk(object):
         if status_code:
             message = "[{0}] {1}".format(status_code, message)
 
-        if self.exception_class == BulkApiError:
-            raise self.exception_class(message, status_code=status_code)
-        else:
-            raise self.exception_class(message)
+        raise BulkApiError(message, status_code=status_code)
 
     def post_batch(self, job_id, data_generator):
         job_content_type = self.job_content_types[job_id]
@@ -310,7 +311,7 @@ class SalesforceBulk(object):
         else:
             return None
 
-    def batch_status(self, job_id=None, batch_id=None, reload=False):
+    def batch_status(self, batch_id=None, job_id=None, reload=False):
         if not reload and batch_id in self.batch_statuses:
             return self.batch_statuses[batch_id]
 
@@ -329,17 +330,17 @@ class SalesforceBulk(object):
         self.batch_statuses[batch_id] = result
         return result
 
-    def batch_state(self, job_id, batch_id, reload=False):
-        status = self.batch_status(job_id, batch_id, reload=reload)
+    def batch_state(self, batch_id, job_id=None, reload=False):
+        status = self.batch_status(batch_id, job_id, reload=reload)
         if 'state' in status:
             return status['state']
         else:
             return None
 
-    def is_batch_done(self, job_id, batch_id):
-        batch_state = self.batch_state(job_id, batch_id, reload=True)
+    def is_batch_done(self, batch_id, job_id=None):
+        batch_state = self.batch_state(batch_id, job_id=job_id, reload=True)
         if batch_state in bulk_states.ERROR_STATES:
-            status = self.batch_status(job_id, batch_id)
+            status = self.batch_status(batch_id, job_id)
             raise BulkBatchFailed(job_id, batch_id, status['stateMessage'])
         return batch_state == bulk_states.COMPLETED
 
@@ -348,13 +349,13 @@ class SalesforceBulk(object):
     def wait_for_batch(self, job_id, batch_id, timeout=60 * 10,
                        sleep_interval=10):
         waited = 0
-        while not self.is_batch_done(job_id, batch_id) and waited < timeout:
+        while not self.is_batch_done(batch_id, job_id) and waited < timeout:
             time.sleep(sleep_interval)
             waited += sleep_interval
 
     def get_batch_result_ids(self, batch_id, job_id=None):
         job_id = job_id or self.lookup_job_id(batch_id)
-        if not self.is_batch_done(job_id, batch_id):
+        if not self.is_batch_done(batch_id, job_id):
             return False
 
         uri = urlparse.urljoin(
@@ -371,7 +372,7 @@ class SalesforceBulk(object):
         return [str(r.text) for r in
                 find_func("{{{0}}}result".format(self.jobNS))]
 
-    def get_all_results_for_batch(self, batch_id, job_id=None):
+    def get_all_results_for_batch(self, batch_id, job_id=None, chunk_size=None):
         """
         Gets result ids and generates each result set from the batch and returns it
         as an generator fetching the next result set when needed
