@@ -2,4 +2,4 @@ from __future__ import absolute_import
 from .salesforce_bulk import SalesforceBulk, BulkApiError
 from .csv_adapter import CsvDictsAdapter
 
-__version__ = '1.1.0'
+__version__ = '2.0.0dev1'
