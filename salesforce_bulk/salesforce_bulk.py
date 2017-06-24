@@ -255,8 +255,8 @@ class SalesforceBulk(object):
 
         self.check_status(resp)
 
-        tree = ET.fromstring(resp.content)
-        batch_id = tree.findtext("{%s}id" % self.jobNS)
+        result = self.parse_response(resp)
+        batch_id = result['id']
 
         self.batches[batch_id] = job_id
 
@@ -277,10 +277,9 @@ class SalesforceBulk(object):
         resp = requests.post(uri, data=data_generator, headers=headers)
         self.check_status(resp)
 
-        content = resp.content
+        result = self.parse_response(resp)
 
-        tree = ET.fromstring(content)
-        batch_id = tree.findtext("{%s}id" % self.jobNS)
+        batch_id = result['id']
         self.batches[batch_id] = job_id
         return batch_id
 
@@ -310,6 +309,17 @@ class SalesforceBulk(object):
         else:
             return None
 
+    def parse_response(self, resp):
+        if resp.headers['Content-Type'] == 'application/json':
+            return resp.json()
+
+        tree = ET.fromstring(resp.content)
+        result = {}
+        for child in tree:
+            result[re.sub("{.*?}", "", child.tag)] = child.text
+
+        return result
+
     def batch_status(self, batch_id=None, job_id=None, reload=False):
         if not reload and batch_id in self.batch_statuses:
             return self.batch_statuses[batch_id]
@@ -321,10 +331,7 @@ class SalesforceBulk(object):
         resp = requests.get(uri, headers=self.headers())
         self.check_status(resp)
 
-        tree = ET.fromstring(resp.content)
-        result = {}
-        for child in tree:
-            result[re.sub("{.*?}", "", child.tag)] = child.text
+        result = self.parse_response(resp)
 
         self.batch_statuses[batch_id] = result
         return result
@@ -366,6 +373,10 @@ class SalesforceBulk(object):
         if resp.status_code != 200:
             return False
 
+        if resp.headers['Content-Type'] == 'application/json':
+            return resp.json()
+
+        result = self.parse_response(resp)
         tree = ET.fromstring(resp.content)
         find_func = getattr(tree, 'iterfind', tree.findall)
         return [str(r.text) for r in

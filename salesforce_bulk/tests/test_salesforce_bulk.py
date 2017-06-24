@@ -1,9 +1,12 @@
 from __future__ import absolute_import
 from __future__ import print_function
 
+import json
+import mock
 import os
 import re
 import time
+import xml.etree.ElementTree as ET
 
 try:
     # Python 2.6
@@ -20,6 +23,7 @@ import unicodecsv
 
 from salesforce_bulk import SalesforceBulk, BulkApiError
 from salesforce_bulk import CsvDictsAdapter
+from salesforce_bulk.util import IteratorBytesIO
 
 
 def batches(iterator, n=10000):
@@ -34,13 +38,130 @@ class SalesforceBulkTests(unittest.TestCase):
 
 
     def setUp(self):
-        request_patcher = patch('simple_salesforce.api.requests')
+        request_patcher = mock.patch('simple_salesforce.api.requests')
         self.mockrequest = request_patcher.start()
         self.addCleanup(request_patcher.stop)
-        self.bulk = Salesforce('12345', 'https://example.com')
+        self.sessionId = '12345'
+        self.host = 'https://example.com'
+        self.bulk = SalesforceBulk(self.sessionId, self.host)
+
+    def test_headers_default(self):
+        self.assertEqual(
+            self.bulk.headers(),
+            {
+                'X-SFDC-Session': self.sessionId,
+                'Content-Type': 'application/xml; charset=UTF-8',
+            }
+        )
+    def test_headers_json(self):
+        self.assertEqual(
+            self.bulk.headers(content_type='application/json'),
+            {
+                'X-SFDC-Session': self.sessionId,
+                'Content-Type': 'application/json; charset=UTF-8',
+            }
+        )
+
+    def test_create_job_doc(self):
+        doc = self.bulk.create_job_doc(
+            'Contact', 'insert'
+        )
+        tree = ET.fromstring(doc)
+
+        operation = tree.findtext('{%s}operation' % self.bulk.jobNS)
+        self.assertEqual(operation, 'insert')
+        
+        obj = tree.findtext('{%s}object' % self.bulk.jobNS)
+        self.assertEqual(obj, 'Contact')
+
+        contentType = tree.findtext('{%s}contentType' % self.bulk.jobNS)
+        self.assertEqual(contentType, 'CSV')
+
+        concurrencyMode = tree.findtext('{%s}concurrencyMode' % self.bulk.jobNS)
+        self.assertIsNone(concurrencyMode)
+        
+        extIdField = tree.findtext('{%s}externalIdFieldName' % self.bulk.jobNS)
+        self.assertIsNone(extIdField)
+
+    def test_create_job_doc_concurrency(self):
+        doc = self.bulk.create_job_doc(
+            'Contact', 'insert', concurrency='Serial'
+        )
+        tree = ET.fromstring(doc)
+
+        operation = tree.findtext('{%s}operation' % self.bulk.jobNS)
+        self.assertEqual(operation, 'insert')
+        
+        obj = tree.findtext('{%s}object' % self.bulk.jobNS)
+        self.assertEqual(obj, 'Contact')
+
+        contentType = tree.findtext('{%s}contentType' % self.bulk.jobNS)
+        self.assertEqual(contentType, 'CSV')
+
+        concurrencyMode = tree.findtext('{%s}concurrencyMode' % self.bulk.jobNS)
+        self.assertEqual(concurrencyMode, 'Serial')
+        
+        extIdField = tree.findtext('{%s}externalIdFieldName' % self.bulk.jobNS)
+        self.assertIsNone(extIdField)
+
+    def test_create_job_doc_external_id(self):
+        doc = self.bulk.create_job_doc(
+            'Contact', 'upsert', external_id_name='ext_id__c'
+        )
+        tree = ET.fromstring(doc)
+
+        operation = tree.findtext('{%s}operation' % self.bulk.jobNS)
+        self.assertEqual(operation, 'upsert')
+        
+        obj = tree.findtext('{%s}object' % self.bulk.jobNS)
+        self.assertEqual(obj, 'Contact')
+
+        contentType = tree.findtext('{%s}contentType' % self.bulk.jobNS)
+        self.assertEqual(contentType, 'CSV')
+
+        concurrencyMode = tree.findtext('{%s}concurrencyMode' % self.bulk.jobNS)
+        self.assertIsNone(concurrencyMode)
+        
+        extIdField = tree.findtext('{%s}externalIdFieldName' % self.bulk.jobNS)
+        self.assertEqual(extIdField, 'ext_id__c')
+
+    def test_create_job_doc_json(self):
+        doc = self.bulk.create_job_doc(
+            'Contact', 'insert', contentType='JSON'
+        )
+        tree = ET.fromstring(doc)
+
+        operation = tree.findtext('{%s}operation' % self.bulk.jobNS)
+        self.assertEqual(operation, 'insert')
+        
+        obj = tree.findtext('{%s}object' % self.bulk.jobNS)
+        self.assertEqual(obj, 'Contact')
+
+        contentType = tree.findtext('{%s}contentType' % self.bulk.jobNS)
+        self.assertEqual(contentType, 'JSON')
+
+        concurrencyMode = tree.findtext('{%s}concurrencyMode' % self.bulk.jobNS)
+        self.assertIsNone(concurrencyMode)
+        
+        extIdField = tree.findtext('{%s}externalIdFieldName' % self.bulk.jobNS)
+        self.assertIsNone(extIdField)
+
+    def test_create_close_job_doc(self):
+        doc = self.bulk.create_close_job_doc()
+        tree = ET.fromstring(doc)
+
+        state = tree.findtext('{%s}state' % self.bulk.jobNS)
+        self.assertEqual(state, 'Closed')
+
+    def test_create_abort_job_doc(self):
+        doc = self.bulk.create_abort_job_doc()
+        tree = ET.fromstring(doc)
+
+        state = tree.findtext('{%s}state' % self.bulk.jobNS)
+        self.assertEqual(state, 'Aborted')
 
 
-class SalesforceBulkIntegrationTest(unittest.TestCase):
+class SalesforceBulkIntegrationTestCSV(unittest.TestCase):
 
     @classmethod
     def setUpClass(cls):
@@ -58,8 +179,6 @@ class SalesforceBulkIntegrationTest(unittest.TestCase):
         cls.endpoint = endpoint
         cls.sessionId = sessionId
 
-        print(endpoint)
-
     def setUp(self):
         self.jobs = []
 
@@ -68,6 +187,7 @@ class SalesforceBulkIntegrationTest(unittest.TestCase):
             job_id = self.bulk.create_query_job("Contact")
             self.jobs.append(job_id)
             batch_id = self.bulk.query(job_id, "SELECT Id FROM Contact WHERE FirstName LIKE 'BulkTestFirst%'")
+            self.bulk.wait_for_batch(job_id, batch_id)
             self.bulk.close_job(job_id)
             results = self.bulk.get_all_results_for_query_batch(batch_id)
             results = (record for result in results
@@ -89,11 +209,20 @@ class SalesforceBulkIntegrationTest(unittest.TestCase):
                 except BulkApiError:
                     pass
 
-    def test_raw_query(self):
+    contentType = 'CSV'
+    expected_result_fields = ['Created', 'Error', 'Id', 'Success']
+    def generate_content(self, data):
+        return CsvDictsAdapter(iter(data))
+
+    def parse_results(self, results):
+        reader = unicodecsv.DictReader(results, encoding='utf-8')
+        return list(reader)
+
+    def test_query(self):
         bulk = SalesforceBulk(self.sessionId, self.endpoint)
         self.bulk = bulk
 
-        job_id = bulk.create_query_job("Contact")
+        job_id = bulk.create_query_job("Contact", contentType=self.contentType)
         self.jobs.append(job_id)
         self.assertIsNotNone(re.match("\w+", job_id))
 
@@ -108,18 +237,20 @@ class SalesforceBulkIntegrationTest(unittest.TestCase):
         all_results = []
         results = bulk.get_all_results_for_query_batch(batch_id)
         for result in results:
-            reader = unicodecsv.DictReader(result, encoding='utf-8')
-            all_results.extend(reader)
-
+            all_results.extend(self.parse_results(result))
 
         self.assertTrue(len(all_results) > 0)
+        self.assertEqual(
+            sorted(all_results[0].keys()), 
+            ['Email', 'Id', 'Name']
+        )
 
 
-    def test_csv_upload(self):
+    def test_upload(self):
         bulk = SalesforceBulk(self.sessionId, self.endpoint)
         self.bulk = bulk
 
-        job_id = bulk.create_insert_job("Contact")
+        job_id = bulk.create_insert_job("Contact", contentType=self.contentType)
         self.jobs.append(job_id)
         self.assertIsNotNone(re.match("\w+", job_id))
 
@@ -132,7 +263,7 @@ class SalesforceBulkIntegrationTest(unittest.TestCase):
             } for i in range(50)
         ]
         for i in range(5):
-            content = CsvDictsAdapter(iter(data))
+            content = self.generate_content(data)
             batch_id = bulk.post_batch(job_id, content)
             self.assertIsNotNone(re.match("\w+", batch_id))
             batch_ids.append(batch_id)
@@ -144,10 +275,23 @@ class SalesforceBulkIntegrationTest(unittest.TestCase):
 
         for batch_id in batch_ids:
             batch_result = bulk.get_batch_results(batch_id)
-            reader = unicodecsv.DictReader(batch_result, encoding='utf-8')
-            results = list(reader)
+
+            results = self.parse_results(batch_result)
 
             self.assertTrue(len(results) > 0)
             self.assertTrue(isinstance(results,list))
-            self.assertEqual(sorted(results[0].keys()), ['Created', 'Error', 'Id','Success'])
+            self.assertEqual(sorted(results[0].keys()), self.expected_result_fields)
             self.assertEqual(len(results), 50)
+
+class SalesforceBulkIntegrationTestJSON(SalesforceBulkIntegrationTestCSV):
+    contentType = 'JSON'
+    expected_result_fields = ['created', 'errors', 'id', 'success']
+    def generate_content(self, data):
+        return json.dumps(data)
+
+    def parse_results(self, results):
+        result = json.load(IteratorBytesIO(results))
+        for row in result:
+            row.pop('attributes', None)
+        print(result)
+        return result
