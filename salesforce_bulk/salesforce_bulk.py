@@ -1,22 +1,33 @@
 # Interface to the Salesforce BULK API
 from __future__ import absolute_import
 
+import json
 import os
+import re
+import time
+import xml.etree.ElementTree as ET
+
 from collections import namedtuple
+from itertools import islice, imap
+from operator import itemgetter
+
 try:
     import urlparse
 except ImportError:
     import urllib.parse as urlparse
-import xml.etree.ElementTree as ET
+
 from six import StringIO
-import re
-import time
 
 import requests
 from simple_salesforce import SalesforceLogin
+import unicodecsv
 
+from . import util
 from . import bulk_states
 
+UploadResult = namedtuple('UploadResult', 'id success created error')
+
+nsclean = re.compile('{.*}')
 
 class BulkApiError(Exception):
 
@@ -299,7 +310,7 @@ class SalesforceBulk(object):
         tree = ET.fromstring(response.content)
         result = {}
         for child in tree:
-            result[re.sub("{.*?}", "", child.tag)] = child.text
+            result[nsclean.sub("", child.tag)] = child.text
         return result
 
     def job_state(self, job_id):
@@ -316,7 +327,7 @@ class SalesforceBulk(object):
         tree = ET.fromstring(resp.content)
         result = {}
         for child in tree:
-            result[re.sub("{.*?}", "", child.tag)] = child.text
+            result[nsclean.sub("", child.tag)] = child.text
 
         return result
 
@@ -370,8 +381,7 @@ class SalesforceBulk(object):
                 job_id, batch_id),
         )
         resp = requests.get(uri, headers=self.headers())
-        if resp.status_code != 200:
-            return False
+        self.check_status(resp)
 
         if resp.headers['Content-Type'] == 'application/json':
             return resp.json()
@@ -395,12 +405,26 @@ class SalesforceBulk(object):
         if not result_ids:
             raise RuntimeError('Batch is not complete')
         for result_id in result_ids:
-            yield self.get_batch_results(
+            yield self.get_query_batch_results(
                 batch_id,
                 result_id,
                 job_id=job_id)
 
-    def get_batch_results(self, batch_id, result_id=None, job_id=None, chunk_size=None):
+    def get_query_batch_results(self, batch_id, result_id, job_id=None, chunk_size=2048):
+        job_id = job_id or self.lookup_job_id(batch_id)
+
+        uri = urlparse.urljoin(
+            self.endpoint + "/",
+            "job/{0}/batch/{1}/result/{2}".format(
+                job_id, batch_id, result_id),
+        )
+
+        resp = requests.get(uri, headers=self.headers(), stream=True)
+        self.check_status(resp)
+
+        return util.IteratorBytesIO(resp.iter_content(chunk_size=chunk_size))
+
+    def get_batch_results(self, batch_id, job_id=None):
         job_id = job_id or self.lookup_job_id(batch_id)
 
         uri = urlparse.urljoin(
@@ -408,10 +432,49 @@ class SalesforceBulk(object):
             "job/{0}/batch/{1}/result".format(
                 job_id, batch_id),
         )
-        if result_id:
-            uri = uri + '/' + result_id
 
         resp = requests.get(uri, headers=self.headers(), stream=True)
         self.check_status(resp)
 
-        return resp.iter_lines(chunk_size=chunk_size)
+        fd = util.IteratorBytesIO(resp.iter_content(chunk_size=2048))
+        if resp.headers['Content-Type'] == 'application/json':
+
+            result = json.load(fd)
+            getter = itemgetter('id', 'success', 'created', 'errors')
+            return [UploadResult(*getter(row)) for row in result]
+
+        elif resp.headers['Content-Type'] == 'text/csv':
+            reader = unicodecsv.reader(
+                fd, encoding='utf-8'
+            )
+            results = islice(reader, 1, None)
+            results = [
+                UploadResult(*row)
+                for row in results
+            ]
+            return results
+        elif resp.headers['Content-Type'] == 'application/xml':
+            tree = ET.parse(fd)
+            getid = lambda x: x and x.text
+            results = [
+                UploadResult(
+                    getid(result.find('{%s}id' % self.jobNS)),
+                    result.find('{%s}success' % self.jobNS).text == 'true',
+                    result.find('{%s}created' % self.jobNS).text == 'true',
+                    [
+                        self.parse_error_result_xml(x)
+                        for x in result.findall('{%s}errors' % self.jobNS)
+                    ]
+                )
+                for result in tree.getroot()
+            ]
+            return results
+
+        # NOTE raise exception if we get here
+
+    def parse_error_result_xml(self, error_xml):
+        return {
+            'fields': [x.text for x in error_xml.findall('{%s}fields' % self.jobNS)],
+            'message': error_xml.find('{%s}message' % self.jobNS).text,
+            'statusCode': error_xml.find('{%s}statusCode' % self.jobNS).text,
+        }
