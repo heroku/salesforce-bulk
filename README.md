@@ -16,7 +16,7 @@ the Salesforce OAUTH2 Web flow and return an access token.
 ```
 from salesforce_bulk import SalesforceBulk
 
-bulk = SalesforceBulk(username=username,password=password,security_token=security_token)
+bulk = SalesforceBulk(username=username, password=password, security_token=security_token)
 ...
 ```
 
@@ -53,7 +53,7 @@ job = bulk.create_query_job("Contact", contentType='JSON')
 batch = bulk.query(job, "select Id,LastName from Contact")
 bulk.close_job(job)
 while not bulk.is_batch_done(batch):
-	sleep(10)
+    sleep(10)
 
 for result in bulk.get_all_results_for_query_batch(batch):
     result = json.load(IteratorBytesIO(result))
@@ -70,10 +70,10 @@ job = bulk.create_query_job("Contact", contentType='CSV')
 batch = bulk.query(job, "select Id,LastName from Contact")
 bulk.close_job(job)
 while not bulk.is_batch_done(batch):
-	sleep(10)
+    sleep(10)
 
 for result in bulk.get_all_results_for_query_batch(batch):
-	reader = unicodecsv.DictReader(result, encoding='utf-8')
+    reader = unicodecsv.DictReader(result, encoding='utf-8')
     for row in reader:
         print row # dictionary rows
 ```
@@ -101,26 +101,15 @@ Full example:
 from salesforce_bulk import CsvDictsAdapter
 
 job = bulk.create_insert_job("Account", contentType='CSV')
-
 accounts = [dict(Name="Account%d" % idx) for idx in xrange(5)]
-
 csv_iter = CsvDictsAdapter(iter(accounts))
-
 batch = bulk.post_batch(job, csv_iter)
-
 bulk.wait_for_batch(job, batch)
-
 bulk.close_job(job)
-
 print "Done. Accounts uploaded."
 ```
 
 ### Concurrency mode
 
-When creating the job, pass `concurrency=Serial` or `concurrency=Parallel` to set the
+When creating the job, pass `concurrency='Serial'` or `concurrency='Parallel'` to set the
 concurrency mode for the job.
-
-
-
-
-
