@@ -46,22 +46,6 @@ The basic sequence for driving the Bulk API is:
 `bulk.create_query_job(object_name, contentType='CSV')`
 
 Example
-
-```
-import unicodecsv
-job = bulk.create_query_job("Contact", contentType='CSV')
-batch = bulk.query(job, "select Id,LastName from Contact")
-bulk.close_job(job)
-while not bulk.is_batch_done(batch):
-	sleep(10)
-
-for result in bulk.get_all_results_for_query_batch(batch):
-	with unicodecsv.DictReader(result, encoding='utf-8') as reader:
-        for row in reader:
-            print row # dictionary rows
-```
-
-Same example but for JSON
 ```
 from salesforce_bulk.util import IteratorBytesIO
 import json
@@ -76,6 +60,27 @@ for result in bulk.get_all_results_for_query_batch(batch):
     for row in result:
         print row # dictionary rows
 ```
+
+Same example but for CSV:
+
+
+```
+import unicodecsv
+job = bulk.create_query_job("Contact", contentType='CSV')
+batch = bulk.query(job, "select Id,LastName from Contact")
+bulk.close_job(job)
+while not bulk.is_batch_done(batch):
+	sleep(10)
+
+for result in bulk.get_all_results_for_query_batch(batch):
+	reader = unicodecsv.DictReader(result, encoding='utf-8')
+    for row in reader:
+        print row # dictionary rows
+```
+
+Note that while CSV is the default for historical reasons, JSON should be prefered since CSV
+has some drawbacks.
+
 
 ## Bulk Insert, Update, Delete
 
