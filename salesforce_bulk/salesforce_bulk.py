@@ -2,13 +2,12 @@
 from __future__ import absolute_import
 
 import json
-import os
 import re
 import time
 import xml.etree.ElementTree as ET
 
 from collections import namedtuple
-from itertools import islice, imap
+from itertools import islice
 from operator import itemgetter
 
 try:
@@ -144,7 +143,7 @@ class SalesforceBulk(object):
 
     def create_queryall_job(self, object_name, **kwargs):
         """ only supported since version 39.0 """
-        return self.create_job(object_bname, "queryAll", **kwargs)
+        return self.create_job(object_name, "queryAll", **kwargs)
 
     def create_insert_job(self, object_name, **kwargs):
         return self.create_job(object_name, "insert", **kwargs)
@@ -386,13 +385,12 @@ class SalesforceBulk(object):
         if resp.headers['Content-Type'] == 'application/json':
             return resp.json()
 
-        result = self.parse_response(resp)
         tree = ET.fromstring(resp.content)
         find_func = getattr(tree, 'iterfind', tree.findall)
         return [str(r.text) for r in
                 find_func("{{{0}}}result".format(self.jobNS))]
 
-    def get_all_results_for_query_batch(self, batch_id, job_id=None, chunk_size=None):
+    def get_all_results_for_query_batch(self, batch_id, job_id=None, chunk_size=2048):
         """
         Gets result ids and generates each result set from the batch and returns it
         as an generator fetching the next result set when needed
@@ -408,7 +406,9 @@ class SalesforceBulk(object):
             yield self.get_query_batch_results(
                 batch_id,
                 result_id,
-                job_id=job_id)
+                job_id=job_id,
+                chunk_size=chunk_size
+            )
 
     def get_query_batch_results(self, batch_id, result_id, job_id=None, chunk_size=2048):
         job_id = job_id or self.lookup_job_id(batch_id)

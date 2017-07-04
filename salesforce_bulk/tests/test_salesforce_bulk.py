@@ -17,7 +17,6 @@ except ImportError:
 from itertools import islice
 
 from six.moves import range
-from six.moves import input
 
 import unicodecsv
 
