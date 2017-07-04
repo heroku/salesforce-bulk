@@ -1,6 +1,11 @@
 from __future__ import absolute_import
 import unicodecsv as csv
-from cStringIO import StringIO
+
+try:
+    from StringIO import StringIO
+except ImportError:
+    from io import BytesIO as StringIO
+
 
 class CsvDictsAdapter(object):
     """Provide a DataChange generator and it provides a file-like object which returns csv data"""

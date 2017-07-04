@@ -15,7 +15,7 @@ try:
 except ImportError:
     import urllib.parse as urlparse
 
-from six import StringIO
+from six import BytesIO as StringIO
 
 import requests
 from simple_salesforce import SalesforceLogin
@@ -27,6 +27,7 @@ from . import bulk_states
 UploadResult = namedtuple('UploadResult', 'id success created error')
 
 nsclean = re.compile('{.*}')
+
 
 class BulkApiError(Exception):
 
@@ -455,7 +456,10 @@ class SalesforceBulk(object):
             return results
         elif resp.headers['Content-Type'] == 'application/xml':
             tree = ET.parse(fd)
-            getid = lambda x: x and x.text
+
+            def getid(x):
+                x is not None and x.text
+
             results = [
                 UploadResult(
                     getid(result.find('{%s}id' % self.jobNS)),

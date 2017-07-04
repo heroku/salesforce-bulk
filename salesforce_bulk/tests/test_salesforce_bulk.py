@@ -298,7 +298,7 @@ class SalesforceBulkIntegrationTestXML(SalesforceBulkIntegrationTestCSV):
         root = ET.Element('sObjects', xmlns=self.bulk.jobNS)
         for row in data:
             obj = ET.SubElement(root, 'sObject')
-            for name, value in row.iteritems():
+            for name, value in row.items():
                 ET.SubElement(obj, name).text = value
         return b'<?xml version="1.0" encoding="UTF-8"?>\n' + \
                 ET.tostring(root, 'utf-8')

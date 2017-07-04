@@ -20,8 +20,9 @@ packages = [
 requires = [
     'six',
     'requests>=2.2.1',
-    'unicodecsv>=0.13.0',
-    'simple-salesforce>=0.69'
+    'unicodecsv>=0.14.1',
+    'simple-salesforce>=0.69',
+
 ]
 
 with open('README.md') as f:
