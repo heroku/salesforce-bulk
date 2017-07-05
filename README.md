@@ -1,3 +1,5 @@
+![travis-badge](https://travis-ci.org/heroku/salesforce-bulk.svg?branch=master)
+
 # Salesforce Bulk
 
 Python client library for accessing the asynchronous Salesforce.com Bulk API.
@@ -9,9 +11,8 @@ Python client library for accessing the asynchronous Salesforce.com Bulk API.
 ## Authentication
 
 To access the Bulk API you need to authenticate a user into Salesforce. The easiest
-way to do this is just to supply `username` and `password`. This library
-will use the `salesforce-oauth-request` package (which you must install) to run
-the Salesforce OAUTH2 Web flow and return an access token.
+way to do this is just to supply `username`, `password` and `security_token`. This library
+will use the `simple-salesforce` package to handle password based authentication.
 
 ```
 from salesforce_bulk import SalesforceBulk
@@ -37,8 +38,8 @@ The basic sequence for driving the Bulk API is:
 
 1. Create a new job
 2. Add one or more batches to the job
-3. Wait for each batch to finish
-4. Close the job
+3. Close the job
+4. Wait for each batch to finish
 
 
 ## Bulk Query
@@ -63,7 +64,6 @@ for result in bulk.get_all_results_for_query_batch(batch):
 
 Same example but for CSV:
 
-
 ```
 import unicodecsv
 job = bulk.create_query_job("Contact", contentType='CSV')
@@ -79,7 +79,7 @@ for result in bulk.get_all_results_for_query_batch(batch):
 ```
 
 Note that while CSV is the default for historical reasons, JSON should be prefered since CSV
-has some drawbacks.
+has some drawbacks including it's handling of NULL vs empty string.
 
 
 ## Bulk Insert, Update, Delete
