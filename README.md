@@ -16,7 +16,7 @@ the Salesforce OAUTH2 Web flow and return an access token.
 ```
 from salesforce_bulk import SalesforceBulk
 
-bulk = SalesforceBulk(username=username,password=password)
+bulk = SalesforceBulk(username=username, password=password, security_token=security_token)
 ...
 ```
 
@@ -43,20 +43,44 @@ The basic sequence for driving the Bulk API is:
 
 ## Bulk Query
 
-`SalesforceBulk.create_query_job(object_name, contentType='CSV', concurrency=None)`
+`bulk.create_query_job(object_name, contentType='CSV')`
 
 Example
+```
+from salesforce_bulk.util import IteratorBytesIO
+import json
+job = bulk.create_query_job("Contact", contentType='JSON')
+batch = bulk.query(job, "select Id,LastName from Contact")
+bulk.close_job(job)
+while not bulk.is_batch_done(batch):
+    sleep(10)
+
+for result in bulk.get_all_results_for_query_batch(batch):
+    result = json.load(IteratorBytesIO(result))
+    for row in result:
+        print row # dictionary rows
+```
+
+Same example but for CSV:
+
 
 ```
+import unicodecsv
 job = bulk.create_query_job("Contact", contentType='CSV')
 batch = bulk.query(job, "select Id,LastName from Contact")
-while not bulk.is_batch_done(job, batch):
-	sleep(10)
 bulk.close_job(job)
+while not bulk.is_batch_done(batch):
+    sleep(10)
 
-for row in bulk.get_batch_result_iter(job, batch, parse_csv=True):
-	print row   #row is a dict
+for result in bulk.get_all_results_for_query_batch(batch):
+    reader = unicodecsv.DictReader(result, encoding='utf-8')
+    for row in reader:
+        print row # dictionary rows
 ```
+
+Note that while CSV is the default for historical reasons, JSON should be prefered since CSV
+has some drawbacks.
+
 
 ## Bulk Insert, Update, Delete
 
@@ -64,7 +88,7 @@ All Bulk upload operations work the same. You set the operation when you create 
 job. Then you submit one or more documents that specify records with columns to
 insert/update/delete. When deleting you should only submit the Id for each record.
 
-For efficiency you should use the `post_bulk_batch` method to post each batch of
+For efficiency you should use the `post_batch` method to post each batch of
 data. (Note that a batch can have a maximum 10,000 records and be 1GB in size.)
 You pass a generator or iterator into this function and it will stream data via
 POST to Salesforce. For help sending CSV formatted data you can use the
@@ -77,26 +101,15 @@ Full example:
 from salesforce_bulk import CsvDictsAdapter
 
 job = bulk.create_insert_job("Account", contentType='CSV')
-
 accounts = [dict(Name="Account%d" % idx) for idx in xrange(5)]
-
 csv_iter = CsvDictsAdapter(iter(accounts))
-
-batch = bulk.post_bulk_batch(job, csv_iter)
-
+batch = bulk.post_batch(job, csv_iter)
 bulk.wait_for_batch(job, batch)
-
 bulk.close_job(job)
-
 print "Done. Accounts uploaded."
 ```
 
 ### Concurrency mode
 
-When creating the job, pass `concurrency=Serial` or `concurrency=Parallel` to set the
+When creating the job, pass `concurrency='Serial'` or `concurrency='Parallel'` to set the
 concurrency mode for the job.
-
-
-
-
-

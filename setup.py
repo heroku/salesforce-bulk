@@ -1,5 +1,6 @@
 #!/usr/bin/env python
 
+from __future__ import absolute_import
 import os
 import sys
 
@@ -17,9 +18,11 @@ packages = [
 ]
 
 requires = [
-    'httplib2>=0.7.5',
+    'six',
     'requests>=2.2.1',
-    'unicodecsv>=0.13.0',
+    'unicodecsv>=0.14.1',
+    'simple-salesforce>=0.69',
+
 ]
 
 with open('README.md') as f:
@@ -29,7 +32,7 @@ with open('LICENSE') as f:
 
 setup(
     name='salesforce-bulk',
-    version='1.1.0',
+    version='2.0.0dev2',
     description='Python interface to the Salesforce.com Bulk API.',
     long_description=readme,
     author='Scott Persinger',
@@ -49,5 +52,9 @@ setup(
         'Programming Language :: Python',
         'Programming Language :: Python :: 2.6',
         'Programming Language :: Python :: 2.7',
+        'Programming Language :: Python :: 3.3',
+        'Programming Language :: Python :: 3.4',
+        'Programming Language :: Python :: 3.5',
+        'Programming Language :: Python :: 3.6',
     ),
 )
