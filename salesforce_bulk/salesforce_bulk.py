@@ -423,7 +423,7 @@ class SalesforceBulk(object):
         resp = requests.get(uri, headers=self.headers(), stream=True)
         self.check_status(resp)
 
-        iter = (x.replace('\0', '') for x in resp.iter_content(chunk_size=chunk_size))
+        iter = (x.replace(b'\0', b'') for x in resp.iter_content(chunk_size=chunk_size))
         return util.IteratorBytesIO(iter)
 
     def get_batch_results(self, batch_id, job_id=None):
@@ -438,7 +438,7 @@ class SalesforceBulk(object):
         resp = requests.get(uri, headers=self.headers(), stream=True)
         self.check_status(resp)
 
-        iter = (x.replace('\0', '') for x in resp.iter_content())
+        iter = (x.replace(b'\0', b'') for x in resp.iter_content())
         fd = util.IteratorBytesIO(iter)
         if resp.headers['Content-Type'] == 'application/json':
 
