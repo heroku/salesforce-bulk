@@ -79,7 +79,7 @@ for result in bulk.get_all_results_for_query_batch(batch):
 ```
 
 Note that while CSV is the default for historical reasons, JSON should be prefered since CSV
-has some drawbacks including it's handling of NULL vs empty string.
+has some drawbacks including its handling of NULL vs empty string.
 
 
 ## Bulk Insert, Update, Delete
