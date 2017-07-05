@@ -1,6 +1,7 @@
 from __future__ import absolute_import
 from __future__ import print_function
 
+import io
 import json
 import mock
 import os
@@ -34,8 +35,8 @@ def batches(iterator, n=10000):
 
         yield batch
 
-class SalesforceBulkTests(unittest.TestCase):
 
+class SalesforceBulkTests(unittest.TestCase):
 
     def setUp(self):
         request_patcher = mock.patch('simple_salesforce.api.requests')
@@ -53,6 +54,7 @@ class SalesforceBulkTests(unittest.TestCase):
                 'Content-Type': 'application/xml; charset=UTF-8',
             }
         )
+
     def test_headers_json(self):
         self.assertEqual(
             self.bulk.headers(content_type='application/json'),
@@ -186,7 +188,8 @@ class SalesforceBulkIntegrationTestCSV(unittest.TestCase):
         if hasattr(self, 'bulk'):
             job_id = self.bulk.create_query_job("Contact")
             self.jobs.append(job_id)
-            batch_id = self.bulk.query(job_id, "SELECT Id FROM Contact WHERE FirstName LIKE 'BulkTestFirst%'")
+            batch_id = self.bulk.query(
+                job_id, "SELECT Id FROM Contact WHERE FirstName LIKE 'BulkTestFirst%'")
             self.bulk.wait_for_batch(job_id, batch_id)
             self.bulk.close_job(job_id)
             results = self.bulk.get_all_results_for_query_batch(batch_id)
@@ -210,6 +213,7 @@ class SalesforceBulkIntegrationTestCSV(unittest.TestCase):
                     pass
 
     contentType = 'CSV'
+
     def generate_content(self, data):
         return CsvDictsAdapter(iter(data))
 
@@ -244,7 +248,6 @@ class SalesforceBulkIntegrationTestCSV(unittest.TestCase):
             ['Email', 'Id', 'Name']
         )
 
-
     def test_upload(self):
         bulk = SalesforceBulk(self.sessionId, self.endpoint)
         self.bulk = bulk
@@ -277,31 +280,35 @@ class SalesforceBulkIntegrationTestCSV(unittest.TestCase):
 
             print(results)
             self.assertTrue(len(results) > 0)
-            self.assertTrue(isinstance(results,list))
+            self.assertTrue(isinstance(results, list))
             self.assertTrue(isinstance(results[0], UploadResult))
             self.assertEqual(len(results), 50)
 
+
 class SalesforceBulkIntegrationTestJSON(SalesforceBulkIntegrationTestCSV):
     contentType = 'JSON'
+
     def generate_content(self, data):
         return json.dumps(data)
 
     def parse_results(self, results):
-        result = json.load(results)
+        result = json.load(io.TextIOWrapper(results, 'utf-8'))
         for row in result:
             row.pop('attributes', None)
         return result
 
+
 class SalesforceBulkIntegrationTestXML(SalesforceBulkIntegrationTestCSV):
     contentType = 'XML'
+
     def generate_content(self, data):
         root = ET.Element('sObjects', xmlns=self.bulk.jobNS)
         for row in data:
             obj = ET.SubElement(root, 'sObject')
             for name, value in row.items():
                 ET.SubElement(obj, name).text = value
-        return b'<?xml version="1.0" encoding="UTF-8"?>\n' + \
-                ET.tostring(root, 'utf-8')
+        return (b'<?xml version="1.0" encoding="UTF-8"?>\n' +
+                ET.tostring(root, 'utf-8'))
 
     def parse_results(self, results):
         result = ET.parse(results)

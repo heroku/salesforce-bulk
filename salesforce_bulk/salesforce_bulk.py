@@ -1,6 +1,7 @@
 # Interface to the Salesforce BULK API
 from __future__ import absolute_import
 
+import io
 import json
 import re
 import time
@@ -423,7 +424,7 @@ class SalesforceBulk(object):
         resp = requests.get(uri, headers=self.headers(), stream=True)
         self.check_status(resp)
 
-        iter = (x.replace('\0', '') for x in resp.iter_content(chunk_size=chunk_size))
+        iter = (x.replace(b'\0', b'') for x in resp.iter_content(chunk_size=chunk_size))
         return util.IteratorBytesIO(iter)
 
     def get_batch_results(self, batch_id, job_id=None):
@@ -438,11 +439,11 @@ class SalesforceBulk(object):
         resp = requests.get(uri, headers=self.headers(), stream=True)
         self.check_status(resp)
 
-        iter = (x.replace('\0', '') for x in resp.iter_content())
+        iter = (x.replace(b'\0', b'') for x in resp.iter_content())
         fd = util.IteratorBytesIO(iter)
         if resp.headers['Content-Type'] == 'application/json':
 
-            result = json.load(fd)
+            result = json.load(io.TextIOWrapper(fd, 'utf-8'))
             getter = itemgetter('id', 'success', 'created', 'errors')
             return [UploadResult(*getter(row)) for row in result]
 

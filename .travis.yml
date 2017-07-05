@@ -1,0 +1,14 @@
+language: python
+python:
+- '2.7'
+- '3.3'
+- '3.4'
+- '3.5'
+- '3.6'
+install: pip install -r requirements.txt
+script: pytest
+env:
+  global:
+  - secure: M1sVN3LS8drt7bMpk4wt2sNK5rnRcWhP46zQV5TRVhD05MA/lTPxa3upPtBbwT5WTW2x+MS04+c2YRut0mD9HFTol24UDLeMhMfKz4P+ot6/unvZ/3eHPDugNYVZZPZ3rtKCzoSbRBlhClyJqEZsslM1UoKbUtnDfYTl5/nRd3g=
+  - secure: ZHyNw8iOzAo9KwEC2TuDfE5LM14IiLClyqG1u+ul9yqKRyu3B5kjsb6FopSDKjUjszGX5nUXAQjLO2BpgmygXTJ/rz1PpPjv66GL0yMWlO4W1LI38niyxbhZQmwXf93mppAeX8hj1aamS12U95Y4V6WqF0Hou+AkMs2ZBJt0BtU=
+  - secure: ZIXZm8jI6O5mzC9z65QT4mBRqFuTrDrIOcXoGlrHomKgxQGxH3F5dHd18e9Uuwy5YaragtwadxJR8TyCVkX2CgeWDsm2RdDbwllHfSfYOhAlNT6EfLaECOTPVmZTnCltNfzhjWtfGzLEBKGlvEguMG2cZxWSCdQD5t6tKMqUw8I=
