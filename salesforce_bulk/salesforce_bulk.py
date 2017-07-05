@@ -1,6 +1,7 @@
 # Interface to the Salesforce BULK API
 from __future__ import absolute_import
 
+import io
 import json
 import re
 import time
@@ -442,7 +443,7 @@ class SalesforceBulk(object):
         fd = util.IteratorBytesIO(iter)
         if resp.headers['Content-Type'] == 'application/json':
 
-            result = json.load(fd)
+            result = json.load(io.TextIOWrapper(fd, 'utf-8'))
             getter = itemgetter('id', 'success', 'created', 'errors')
             return [UploadResult(*getter(row)) for row in result]
 
