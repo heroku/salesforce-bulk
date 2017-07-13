@@ -5,6 +5,7 @@ import io
 import json
 import mock
 import os
+import pickle
 import re
 import time
 import xml.etree.ElementTree as ET
@@ -23,6 +24,7 @@ import unicodecsv
 
 from salesforce_bulk import SalesforceBulk, BulkApiError, UploadResult
 from salesforce_bulk import CsvDictsAdapter
+from salesforce_bulk.salesforce_bulk import BulkJobAborted, BulkBatchFailed
 
 nsclean = re.compile('{.*}')
 
@@ -161,6 +163,42 @@ class SalesforceBulkTests(unittest.TestCase):
 
         state = tree.findtext('{%s}state' % self.bulk.jobNS)
         self.assertEqual(state, 'Aborted')
+
+    def test_pickle_roundtrip_bulk_api_error_no_status(self):
+        s = pickle.dumps(BulkApiError('message'))
+        e = pickle.loads(s)
+        assert e.__class__ is BulkApiError
+        assert e.args[0] == 'message'
+        assert e.status_code is None
+
+    def test_pickle_roundtrip_bulk_api_error_no_status_code(self):
+        s = pickle.dumps(BulkApiError('message', 400))
+        e = pickle.loads(s)
+        assert e.__class__ is BulkApiError
+        assert e.args[0] == 'message'
+        assert e.status_code == 400
+
+    def test_pickle_roundtrip_bulk_job_aborted(self):
+        orig = BulkJobAborted('sfid1234')
+        s = pickle.dumps(orig)
+        e = pickle.loads(s)
+        assert e.__class__ is BulkJobAborted
+        assert e.job_id == 'sfid1234'
+        assert 'sfid1234' in e.args[0]
+        assert e.args[0] == orig.args[0]
+
+    def test_pickle_roundtrip_bulk_batch_failed(self):
+        orig = BulkBatchFailed('sfid1234', 'sfid5678', 'some thing happened')
+        s = pickle.dumps(orig)
+        e = pickle.loads(s)
+        assert e.__class__ is BulkBatchFailed
+        assert e.job_id == 'sfid1234'
+        assert e.batch_id == 'sfid5678'
+        assert e.state_message == 'some thing happened'
+        assert 'sfid1234' in e.args[0]
+        assert 'sfid5678' in e.args[0]
+        assert 'some thing happened' in e.args[0]
+        assert orig.args[0] == e.args[0]
 
 
 class SalesforceBulkIntegrationTestCSV(unittest.TestCase):

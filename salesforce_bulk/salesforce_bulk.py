@@ -36,6 +36,9 @@ class BulkApiError(Exception):
         super(BulkApiError, self).__init__(message)
         self.status_code = status_code
 
+    def __reduce__(self):
+        return BulkApiError, (self.args[0], self.status_code)
+
 
 class BulkJobAborted(BulkApiError):
 
@@ -44,6 +47,9 @@ class BulkJobAborted(BulkApiError):
 
         message = 'Job {0} aborted'.format(job_id)
         super(BulkJobAborted, self).__init__(message)
+
+    def __reduce__(self):
+        return BulkJobAborted, (self.job_id,)
 
 
 class BulkBatchFailed(BulkApiError):
@@ -56,6 +62,9 @@ class BulkBatchFailed(BulkApiError):
         message = 'Batch {0} of job {1} failed: {2}'.format(batch_id, job_id,
                                                             state_message)
         super(BulkBatchFailed, self).__init__(message)
+
+    def __reduce__(self):
+        return BulkBatchFailed, (self.job_id, self.batch_id, self.state_message)
 
 
 job_to_http_content_type = {
