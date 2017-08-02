@@ -44,7 +44,11 @@ The basic sequence for driving the Bulk API is:
 
 ## Bulk Query
 
-`bulk.create_query_job(object_name, contentType='CSV')`
+`bulk.create_query_job(object_name, contentType='JSON')`
+
+Using API v39.0 or higher, you can also use the queryAll operation:
+
+`bulk.create_queryall_job(object_name, contentType='JSON')`
 
 Example
 ```
