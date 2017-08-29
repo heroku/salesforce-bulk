@@ -143,8 +143,11 @@ class SalesforceBulk(object):
             )
 
     def headers(self, values={}, content_type='application/xml'):
-        default = {"X-SFDC-Session": self.sessionId,
-                   "Content-Type": "{}; charset=UTF-8".format(content_type)}
+        default = {
+            "X-SFDC-Session": self.sessionId,
+            "Content-Type": "{}; charset=UTF-8".format(content_type),
+            'Accept-Encoding': "gzip",
+        }
         default.update(values)
         return default
 
