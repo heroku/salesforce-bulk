@@ -54,6 +54,7 @@ class SalesforceBulkTests(unittest.TestCase):
             {
                 'X-SFDC-Session': self.sessionId,
                 'Content-Type': 'application/xml; charset=UTF-8',
+                'Accept-Encoding': 'gzip',
             }
         )
 
@@ -63,6 +64,7 @@ class SalesforceBulkTests(unittest.TestCase):
             {
                 'X-SFDC-Session': self.sessionId,
                 'Content-Type': 'application/json; charset=UTF-8',
+                'Accept-Encoding': 'gzip',
             }
         )
 
