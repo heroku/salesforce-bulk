@@ -421,7 +421,7 @@ class SalesforceBulk(object):
                 chunk_size=chunk_size
             )
 
-    def get_query_batch_results(self, batch_id, result_id, job_id=None, chunk_size=2048):
+    def get_query_batch_results(self, batch_id, result_id, job_id=None, chunk_size=2048, raw=False):
         job_id = job_id or self.lookup_job_id(batch_id)
 
         uri = urlparse.urljoin(
@@ -432,6 +432,8 @@ class SalesforceBulk(object):
 
         resp = requests.get(uri, headers=self.headers(), stream=True)
         self.check_status(resp)
+        if raw:
+            return resp.raw
 
         iter = (x.replace(b'\0', b'') for x in resp.iter_content(chunk_size=chunk_size))
         return util.IteratorBytesIO(iter)
