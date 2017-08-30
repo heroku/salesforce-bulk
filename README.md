@@ -6,6 +6,12 @@ Python client library for accessing the asynchronous Salesforce.com Bulk API.
 
 ## Installation
 
+As of right now these docs are out of sync with the version in pypi. To install this version please run:
+```pip install 'https://github.com/heroku/salesforce-bulk/archive/v2.0.0dev6.zip#egg=salesforce-bulk==2.0.0dev6'```
+or add
+```https://github.com/heroku/salesforce-bulk/archive/v2.0.0dev6.zip#egg=salesforce-bulk==2.0.0dev6```
+to your requirements.txt file. Once the 2.0.0 final is released you'll be able to install as normal using:
+
 ```pip install salesforce-bulk```
 
 ## Authentication
