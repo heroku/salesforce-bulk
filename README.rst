@@ -1,8 +1,6 @@
 .. figure:: https://travis-ci.org/heroku/salesforce-bulk.svg?branch=master
    :alt: travis-badge
 
-   travis-badge
-
 Salesforce Bulk
 ===============
 
