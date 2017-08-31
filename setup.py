@@ -65,7 +65,7 @@ class PublishCommand(Command):
                 raise
 
         self.status('Building Source and Wheel (universal) distribution...')
-        os.system('{0} setup.py sdist bdist_wheel --universal'.format(sys.executable))
+        os.system('{0} setup.py sdist bdist_wheel'.format(sys.executable))
 
         self.status('Uploading the package to PyPi via Twine...')
         os.system('twine upload dist/*')
@@ -98,4 +98,7 @@ setup(
         'Programming Language :: Python :: 3.5',
         'Programming Language :: Python :: 3.6',
     ),
+    cmdclass={
+        'publish': PublishCommand,
+    },
 )
