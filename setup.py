@@ -99,6 +99,6 @@ setup(
         'Programming Language :: Python :: 3.6',
     ),
     cmdclass={
-        'publish': PublishCommand,
+        'newpublish': PublishCommand,
     },
 )
