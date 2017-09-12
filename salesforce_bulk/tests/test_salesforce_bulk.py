@@ -324,6 +324,69 @@ class SalesforceBulkIntegrationTestCSV(unittest.TestCase):
             self.assertTrue(isinstance(results[0], UploadResult))
             self.assertEqual(len(results), 50)
 
+    def test_upload_with_mapping_file(self):
+        if self.contentType != 'CSV':
+            print('Mapping file can only be used with CSV content')
+            return
+        bulk = SalesforceBulk(self.sessionId, self.endpoint)
+        self.bulk = bulk
+
+        job_id = bulk.create_insert_job("Contact", contentType=self.contentType)
+        self.jobs.append(job_id)
+        self.assertIsNotNone(re.match("\w+", job_id))
+
+        batch_ids = []
+        data = [
+            {
+                'Not FirstName': 'BulkTestFirst%s' % i,
+                'Arbitrary Field': 'BulkLastName',
+                'Phone': '555-555-5555',
+            } for i in range(50)
+        ]
+
+        mapping_data = [
+            {
+                "Salesforce Field": "FirstName",
+                "Csv Header": "NotFirstName",
+                "Value": "",
+                "Hint": ""
+            },
+            {
+                "Salesforce Field": "Phone",
+                "Csv Header": "Phone",
+                "Value": "",
+                "Hint": ""
+            },
+            {
+                "Salesforce Field": "LastName",
+                "Csv Header": "Arbitrary Field",
+                "Value": "",
+                "Hint": ""
+            }
+        ]
+        mapping_data = self.generate_content(mapping_data)
+
+        bulk.post_mapping_file(job_id,mapping_data)
+        for i in range(2):
+            content = self.generate_content(data)
+            batch_id = bulk.post_batch(job_id, content)
+            self.assertIsNotNone(re.match("\w+", batch_id))
+            batch_ids.append(batch_id)
+
+        bulk.close_job(job_id)
+
+        for batch_id in batch_ids:
+            bulk.wait_for_batch(job_id, batch_id, timeout=120)
+
+        for batch_id in batch_ids:
+            results = bulk.get_batch_results(batch_id)
+
+            print(results)
+            self.assertTrue(len(results) > 0)
+            self.assertTrue(isinstance(results, list))
+            self.assertTrue(isinstance(results[0], UploadResult))
+            self.assertEqual(len(results), 50)
+
 
 class SalesforceBulkIntegrationTestJSON(SalesforceBulkIntegrationTestCSV):
     contentType = 'JSON'
