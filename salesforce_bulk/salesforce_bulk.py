@@ -307,6 +307,17 @@ class SalesforceBulk(object):
         self.batches[batch_id] = job_id
         return batch_id
 
+    def post_mapping_file(self, job_id, mapping_data):
+        job_content_type = 'CSV'
+        http_content_type = job_to_http_content_type[job_content_type]
+        uri = self.endpoint + "/job/%s/spec" % job_id
+        headers = self.headers(content_type=http_content_type)
+        resp = requests.post(uri, data=mapping_data, headers=headers)
+        self.check_status(resp)
+
+        if resp.status_code != 201:
+            raise Exception("Unable to upload mapping file")
+
     def lookup_job_id(self, batch_id):
         try:
             return self.batches[batch_id]
