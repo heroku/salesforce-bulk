@@ -1,5 +1,5 @@
 mock
-pytest
+pytest==3.2.3
 six
 requests>=2.2.1
 unicodecsv>=0.14.1
