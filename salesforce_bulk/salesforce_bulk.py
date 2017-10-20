@@ -172,9 +172,18 @@ class SalesforceBulk(object):
         return self.create_job(object_name, "delete", **kwargs)
 
     def create_job(self, object_name=None, operation=None, contentType='CSV',
-                   concurrency=None, external_id_name=None):
+                   concurrency=None, external_id_name=None, pk_chunking=False):
         assert(object_name is not None)
         assert(operation is not None)
+
+        extra_headers = {}
+        if pk_chunking:
+            if pk_chunking is True:
+                pk_chunking = u'true'
+            elif isinstance(pk_chunking, int):
+                pk_chunking = u'chunkSize=%d;' % pk_chunking
+
+            extra_headers['Sforce-Enable-PKChunking'] = pk_chunking
 
         doc = self.create_job_doc(object_name=object_name,
                                   operation=operation,
@@ -183,7 +192,7 @@ class SalesforceBulk(object):
                                   external_id_name=external_id_name)
 
         resp = requests.post(self.endpoint + "/job",
-                             headers=self.headers(),
+                             headers=self.headers(extra_headers),
                              data=doc)
         self.check_status(resp)
 
