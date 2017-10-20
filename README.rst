@@ -95,10 +95,10 @@ be prefered since CSV has some drawbacks including its handling of NULL
 vs empty string.
 
 PK Chunk Header
-+++++++++++++++
+^^^^^^^^^^^^^^^
 
-If you are querying a large number of records you probably want to turn on 
-`PK Chunking <https://developer.salesforce.com/docs/atlas.en-us.api_asynch.meta/api_asynch/async_api_headers_enable_pk_chunking.htm>`_:
+If you are querying a large number of records you probably want to turn on `PK Chunking
+<https://developer.salesforce.com/docs/atlas.en-us.api_asynch.meta/api_asynch/async_api_headers_enable_pk_chunking.htm>`_:
 
 ``bulk.create_query_job(object_name, contentType='CSV', pk_chunking=True)``
 
@@ -142,7 +142,7 @@ Full example:
     print "Done. Accounts uploaded."
 
 Concurrency mode
-~~~~~~~~~~~~~~~~
+^^^^^^^^^^^^^^^^
 
 When creating the job, pass ``concurrency='Serial'`` or
 ``concurrency='Parallel'`` to set the concurrency mode for the job.
