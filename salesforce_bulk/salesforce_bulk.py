@@ -17,6 +17,7 @@ except ImportError:
     import urllib.parse as urlparse
 
 from six import BytesIO as StringIO
+from six import text_type
 
 import requests
 from simple_salesforce import SalesforceLogin
@@ -182,6 +183,8 @@ class SalesforceBulk(object):
                 pk_chunking = u'true'
             elif isinstance(pk_chunking, int):
                 pk_chunking = u'chunkSize=%d;' % pk_chunking
+            else:
+                pk_chunking = text_type(pk_chunking)
 
             extra_headers['Sforce-Enable-PKChunking'] = pk_chunking
 
