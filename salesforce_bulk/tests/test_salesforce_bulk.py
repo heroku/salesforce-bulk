@@ -23,7 +23,7 @@ from six.moves import range
 import unicodecsv
 
 from salesforce_bulk import SalesforceBulk, BulkApiError, UploadResult
-from salesforce_bulk import CsvDictsAdapter
+from salesforce_bulk import CsvDictsAdapter, bulk_states
 from salesforce_bulk.salesforce_bulk import BulkJobAborted, BulkBatchFailed
 
 nsclean = re.compile('{.*}')
@@ -287,6 +287,52 @@ class SalesforceBulkIntegrationTestCSV(unittest.TestCase):
             sorted(all_results[0].keys()),
             ['Email', 'Id', 'Name']
         )
+
+    def test_query_pk_chunk(self):
+        bulk = SalesforceBulk(self.sessionId, self.endpoint)
+        self.bulk = bulk
+
+        job_id = bulk.create_query_job("Contact", contentType=self.contentType, pk_chunking=True)
+        self.jobs.append(job_id)
+        self.assertIsNotNone(re.match("\w+", job_id))
+
+        batch_id = bulk.query(job_id, "Select Id,Name,Email from Contact")
+        self.assertIsNotNone(re.match("\w+", batch_id))
+
+        try:
+            i = 0
+            while not bulk.is_batch_done(batch_id):
+                print("Job not done yet...")
+                print(bulk.batch_status(batch_id))
+                time.sleep(2)
+                i += 1
+                if i == 20:
+                    raise Exception
+        except BulkBatchFailed as e:
+            if e.state != bulk_states.NOT_PROCESSED:
+                raise
+
+        batches = bulk.get_batch_list(job_id)
+        print (batches)
+        batch_ids = [x['id'] for x in batches if x['state'] != bulk_states.NOT_PROCESSED]
+        requests = [bulk.get_query_batch_request(x, job_id) for x in batch_ids]
+        print (requests)
+        all_results = []
+        while not all(bulk.is_batch_done(i, job_id) for i in batch_ids):
+            print("Job not done yet...")
+            print(bulk.batch_status(batch_id, job_id))
+            time.sleep(2)
+
+        for batch_id in batch_ids:
+            results = bulk.get_all_results_for_query_batch(batch_id, job_id)
+            for result in results:
+                all_results.extend(self.parse_results(result))
+
+            self.assertTrue(len(all_results) > 0)
+            self.assertEqual(
+                sorted(all_results[0].keys()),
+                ['Email', 'Id', 'Name']
+            )
 
     def test_upload(self):
         bulk = SalesforceBulk(self.sessionId, self.endpoint)
