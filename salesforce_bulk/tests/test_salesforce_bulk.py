@@ -296,7 +296,8 @@ class SalesforceBulkIntegrationTestCSV(unittest.TestCase):
         self.jobs.append(job_id)
         self.assertIsNotNone(re.match("\w+", job_id))
 
-        batch_id = bulk.query(job_id, "Select Id,Name,Email from Contact")
+        query = "Select Id,Name,Email from Contact"
+        batch_id = bulk.query(job_id, query)
         self.assertIsNotNone(re.match("\w+", batch_id))
 
         try:
@@ -317,11 +318,19 @@ class SalesforceBulkIntegrationTestCSV(unittest.TestCase):
         batch_ids = [x['id'] for x in batches if x['state'] != bulk_states.NOT_PROCESSED]
         requests = [bulk.get_query_batch_request(x, job_id) for x in batch_ids]
         print (requests)
+        for request in requests:
+            self.assertTrue(request.startswith(query))
+
         all_results = []
+
+        i = 0
         while not all(bulk.is_batch_done(i, job_id) for i in batch_ids):
             print("Job not done yet...")
             print(bulk.batch_status(batch_id, job_id))
             time.sleep(2)
+            i += 1
+            if i == 20:
+                raise Exception
 
         for batch_id in batch_ids:
             results = bulk.get_all_results_for_query_batch(batch_id, job_id)
