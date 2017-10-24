@@ -324,7 +324,7 @@ class SalesforceBulkIntegrationTestCSV(unittest.TestCase):
         all_results = []
 
         i = 0
-        while not all(bulk.is_batch_done(i, job_id) for i in batch_ids):
+        while not all(bulk.is_batch_done(j, job_id) for j in batch_ids):
             print("Job not done yet...")
             print(bulk.batch_status(batch_id, job_id))
             time.sleep(2)
