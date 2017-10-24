@@ -55,17 +55,18 @@ class BulkJobAborted(BulkApiError):
 
 class BulkBatchFailed(BulkApiError):
 
-    def __init__(self, job_id, batch_id, state_message):
+    def __init__(self, job_id, batch_id, state_message, state=None):
         self.job_id = job_id
         self.batch_id = batch_id
         self.state_message = state_message
+        self.state = state
 
         message = 'Batch {0} of job {1} failed: {2}'.format(batch_id, job_id,
                                                             state_message)
         super(BulkBatchFailed, self).__init__(message)
 
     def __reduce__(self):
-        return BulkBatchFailed, (self.job_id, self.batch_id, self.state_message)
+        return BulkBatchFailed, (self.job_id, self.batch_id, self.state_message, self.state)
 
 
 job_to_http_content_type = {
@@ -210,6 +211,26 @@ class SalesforceBulk(object):
         if resp.status_code >= 400:
             msg = "Bulk API HTTP Error result: {0}".format(resp.text)
             self.raise_error(msg, resp.status_code)
+
+    def get_batch_list(self, job_id):
+        url = self.endpoint + "/job/{}/batch".format(job_id)
+        resp = requests.get(url, headers=self.headers())
+        self.check_status(resp)
+        results = self.parse_response(resp)
+        if isinstance(results, dict):
+            return results['batchInfo']
+
+        return results
+
+    def get_query_batch_request(self, batch_id, job_id=None):
+        """ Fetch the request sent for the batch. Note should only used for query batches """
+        if not job_id:
+            job_id = self.lookup_job_id(batch_id)
+
+        url = self.endpoint + "/job/{}/batch/{}/request".format(job_id, batch_id)
+        resp = requests.get(url, headers=self.headers())
+        self.check_status(resp)
+        return resp.text
 
     def close_job(self, job_id):
         doc = self.create_close_job_doc()
@@ -361,6 +382,16 @@ class SalesforceBulk(object):
             return resp.json()
 
         tree = ET.fromstring(resp.content)
+        if nsclean.sub("", tree.tag) == 'batchInfoList':
+            results = []
+            for subtree in tree:
+                result = {}
+                results.append(result)
+                for child in subtree:
+                    result[nsclean.sub("", child.tag)] = child.text
+
+            return results
+
         result = {}
         for child in tree:
             result[nsclean.sub("", child.tag)] = child.text
@@ -394,7 +425,7 @@ class SalesforceBulk(object):
         batch_state = self.batch_state(batch_id, job_id=job_id, reload=True)
         if batch_state in bulk_states.ERROR_STATES:
             status = self.batch_status(batch_id, job_id)
-            raise BulkBatchFailed(job_id, batch_id, status['stateMessage'])
+            raise BulkBatchFailed(job_id, batch_id, status.get('stateMessage'), batch_state)
         return batch_state == bulk_states.COMPLETED
 
     # Wait for the given batch to complete, waiting at most timeout seconds

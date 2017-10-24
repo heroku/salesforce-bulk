@@ -1,6 +1,6 @@
 ABORTED = 'Aborted'
 FAILED = 'Failed'
-NOT_PROCESSED = 'Not Processed'
+NOT_PROCESSED = 'NotProcessed'
 COMPLETED = 'Completed'
 
 ERROR_STATES = (
