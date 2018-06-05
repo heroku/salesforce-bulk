@@ -82,15 +82,15 @@ DEFAULT_API_VERSION = "40.0"
 class SalesforceBulk(object):
 
     def __init__(self, sessionId=None, host=None, username=None, password=None,
-                 API_version=DEFAULT_API_VERSION, sandbox=False,
-                 security_token=None, organizationId=None, client_id=None):
+                 API_version=DEFAULT_API_VERSION, sandbox=None,
+                 security_token=None, organizationId=None, client_id=None, domain=None):
         if not sessionId and not username:
             raise RuntimeError(
                 "Must supply either sessionId/instance_url or username/password")
         if not sessionId:
             sessionId, host = SalesforceBulk.login_to_salesforce(
                 username, password, sandbox=sandbox, security_token=security_token,
-                organizationId=organizationId, API_version=API_version, client_id=client_id)
+                organizationId=organizationId, API_version=API_version, client_id=client_id, domain=domain)
 
         if host[0:4] == 'http':
             self.endpoint = host
@@ -106,8 +106,8 @@ class SalesforceBulk(object):
         self.API_version = API_version
 
     @staticmethod
-    def login_to_salesforce(username, password, sandbox=False, security_token=None,
-                            organizationId=None, client_id=None, API_version=DEFAULT_API_VERSION):
+    def login_to_salesforce(username, password, sandbox=None, security_token=None,
+                            organizationId=None, client_id=None, API_version=DEFAULT_API_VERSION, domain=None):
         if client_id:
             client_id = "{prefix}/{app_name}".format(
                 prefix=DEFAULT_CLIENT_ID_PREFIX,
@@ -125,7 +125,8 @@ class SalesforceBulk(object):
                 security_token=security_token,
                 sandbox=sandbox,
                 sf_version=API_version,
-                client_id=client_id)
+                client_id=client_id,
+                domain=domain)
 
         elif all(arg is not None for arg in (
                 username, password, organizationId)):
@@ -137,7 +138,8 @@ class SalesforceBulk(object):
                 organizationId=organizationId,
                 sandbox=sandbox,
                 sf_version=API_version,
-                client_id=client_id)
+                client_id=client_id,
+                domain=domain)
 
         else:
             raise TypeError(
