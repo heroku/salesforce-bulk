@@ -9,8 +9,9 @@ API.
 
 Installation
 ------------
+.. code-block:: bash
 
-``pip install salesforce-bulk``
+    pip install salesforce-bulk
 
 Authentication
 --------------
@@ -20,7 +21,7 @@ The easiest way to do this is just to supply ``username``, ``password``
 and ``security_token``. This library will use the ``simple-salesforce``
 package to handle password based authentication.
 
-::
+.. code-block:: python
 
     from salesforce_bulk import SalesforceBulk
 
@@ -30,7 +31,7 @@ package to handle password based authentication.
 Alternatively if you run have access to a session ID and instance\_url
 you can use those directly:
 
-::
+.. code-block:: python
 
     from urlparse import urlparse
     from salesforce_bulk import SalesforceBulk
@@ -59,10 +60,11 @@ Using API v39.0 or higher, you can also use the queryAll operation:
 
 Example
 
-::
+.. code-block:: python
 
-    from salesforce_bulk.util import IteratorBytesIO
     import json
+    from salesforce_bulk.util import IteratorBytesIO
+
     job = bulk.create_query_job("Contact", contentType='JSON')
     batch = bulk.query(job, "select Id,LastName from Contact")
     bulk.close_job(job)
@@ -76,9 +78,10 @@ Example
 
 Same example but for CSV:
 
-::
+.. code-block:: python
 
     import unicodecsv
+    
     job = bulk.create_query_job("Contact", contentType='CSV')
     batch = bulk.query(job, "select Id,LastName from Contact")
     bulk.close_job(job)
@@ -88,7 +91,7 @@ Same example but for CSV:
     for result in bulk.get_all_results_for_query_batch(batch):
         reader = unicodecsv.DictReader(result, encoding='utf-8')
         for row in reader:
-            print row # dictionary rows
+            print(row) # dictionary rows
 
 Note that while CSV is the default for historical reasons, JSON should
 be prefered since CSV has some drawbacks including its handling of NULL
@@ -129,7 +132,7 @@ which produces CSV data.
 
 Full example:
 
-::
+.. code-block:: python
 
     from salesforce_bulk import CsvDictsAdapter
 
@@ -139,7 +142,7 @@ Full example:
     batch = bulk.post_batch(job, csv_iter)
     bulk.wait_for_batch(job, batch)
     bulk.close_job(job)
-    print "Done. Accounts uploaded."
+    print("Done. Accounts uploaded.")
 
 Concurrency mode
 ^^^^^^^^^^^^^^^^
