@@ -5,6 +5,5 @@ COMPLETED = 'Completed'
 
 ERROR_STATES = (
     ABORTED,
-    FAILED,
-    NOT_PROCESSED,
+    FAILED
 )
