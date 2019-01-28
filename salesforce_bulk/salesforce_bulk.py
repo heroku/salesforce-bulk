@@ -73,6 +73,9 @@ job_to_http_content_type = {
     'CSV': 'text/csv',
     'XML': 'application/xml',
     'JSON': 'application/json',
+    'ZIP_CSV': 'zip/csv',
+    'ZIP_XML': 'zip/xml',
+    'ZIP_JSON': 'zip/json',
 }
 
 DEFAULT_CLIENT_ID_PREFIX = 'PySFBulk'
@@ -325,13 +328,13 @@ class SalesforceBulk(object):
 
         raise BulkApiError(message, status_code=status_code)
 
-    def post_batch(self, job_id, data_generator):
+    def post_batch(self, job_id, data):
         job_content_type = self.job_content_types[job_id]
         http_content_type = job_to_http_content_type[job_content_type]
 
         uri = self.endpoint + "/job/%s/batch" % job_id
         headers = self.headers(content_type=http_content_type)
-        resp = requests.post(uri, data=data_generator, headers=headers)
+        resp = requests.post(uri, data=data, headers=headers)
         self.check_status(resp)
 
         result = self.parse_response(resp)
