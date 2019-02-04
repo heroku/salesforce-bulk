@@ -76,7 +76,7 @@ job_to_http_content_type = {
 }
 
 DEFAULT_CLIENT_ID_PREFIX = 'PySFBulk'
-DEFAULT_API_VERSION = "40.0"
+DEFAULT_API_VERSION = "44.0"
 
 
 class SalesforceBulk(object):
