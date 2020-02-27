@@ -114,6 +114,40 @@ Additionally if you want to do something more sophisticated you can provide a he
 
 ``bulk.create_query_job(object_name, contentType='CSV', pk_chunking='chunkSize=50000; startRow=00130000000xEftMGH')``
 
+Example:
+
+.. code-block:: python
+
+    import unicodecsv
+    # Create a Job with PK Chunking enabled and with Parallel Concurrency
+    job_id = bulk.create_query_job(salesforceObject, contentType='CSV', concurrency='Parallel', pk_chunking=True)
+
+    # Add one or more batches to the job
+    bulk.query(job_id, query)
+
+    # Wait for each batch to finish
+    while not bulk.job_status(job_id)['numberBatchesTotal'] == bulk.job_status(job_id)['numberBatchesCompleted']:
+        print("Not done")
+        sleep(10)
+    print("Done")
+
+    # Get list of batch Ids
+    batch_id_list = [batch['id'] for batch in bulk.get_batch_list(job_id) if batch['state'] == 'Completed']
+
+    # Retrieve the Results
+    data = []
+    for batch_id in batch_id_list:
+        for result in bulk.get_all_results_for_query_batch(batch_id, job_id, chunk_size=1000000):
+            reader = unicodecsv.DictReader(result)
+            for row in reader:
+                data.append(row)
+
+    # Close the job
+    bulk.close_job(job_id)
+
+    print("Done retrieving data")
+    print(data)
+
 Bulk Insert, Update, Delete
 ---------------------------
 
