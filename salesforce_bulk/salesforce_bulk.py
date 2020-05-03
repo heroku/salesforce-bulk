@@ -82,14 +82,14 @@ DEFAULT_API_VERSION = "40.0"
 class SalesforceBulk(object):
 
     def __init__(self, sessionId=None, host=None, username=None, password=None,
-                 API_version=DEFAULT_API_VERSION, sandbox=False,
+                 API_version=DEFAULT_API_VERSION, domain=None,
                  security_token=None, organizationId=None, client_id=None):
         if not sessionId and not username:
             raise RuntimeError(
                 "Must supply either sessionId/instance_url or username/password")
         if not sessionId:
             sessionId, host = SalesforceBulk.login_to_salesforce(
-                username, password, sandbox=sandbox, security_token=security_token,
+                username, password, domain=domain, security_token=security_token,
                 organizationId=organizationId, API_version=API_version, client_id=client_id)
 
         if host[0:4] == 'http':
@@ -106,7 +106,7 @@ class SalesforceBulk(object):
         self.API_version = API_version
 
     @staticmethod
-    def login_to_salesforce(username, password, sandbox=False, security_token=None,
+    def login_to_salesforce(username, password, domain=None, security_token=None,
                             organizationId=None, client_id=None, API_version=DEFAULT_API_VERSION):
         if client_id:
             client_id = "{prefix}/{app_name}".format(
@@ -123,7 +123,7 @@ class SalesforceBulk(object):
                 username=username,
                 password=password,
                 security_token=security_token,
-                sandbox=sandbox,
+                domain=domain,
                 sf_version=API_version,
                 client_id=client_id)
 
@@ -135,7 +135,7 @@ class SalesforceBulk(object):
                 username=username,
                 password=password,
                 organizationId=organizationId,
-                sandbox=sandbox,
+                domain=domain,
                 sf_version=API_version,
                 client_id=client_id)
 
