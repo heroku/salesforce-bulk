@@ -216,7 +216,7 @@ class SalesforceBulkIntegrationTestCSV(unittest.TestCase):
             raise unittest.SkipTest('Missing Configuration for logged in tests')
 
         sessionId, endpoint = SalesforceBulk.login_to_salesforce(
-            username, password, security_token, domain=domain)
+            username, password, security_token=security_token, domain=domain)
 
         cls.endpoint = endpoint
         cls.sessionId = sessionId
