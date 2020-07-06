@@ -267,10 +267,10 @@ class SalesforceBulkIntegrationTestCSV(unittest.TestCase):
 
         job_id = bulk.create_query_job("Contact", contentType=self.contentType)
         self.jobs.append(job_id)
-        self.assertIsNotNone(re.match("\w+", job_id))
+        self.assertIsNotNone(re.match(r"\w+", job_id))
 
         batch_id = bulk.query(job_id, "Select Id,Name,Email from Contact Limit 1000")
-        self.assertIsNotNone(re.match("\w+", batch_id))
+        self.assertIsNotNone(re.match(r"\w+", batch_id))
 
         while not bulk.is_batch_done(batch_id):
             print("Job not done yet...")
@@ -294,11 +294,11 @@ class SalesforceBulkIntegrationTestCSV(unittest.TestCase):
 
         job_id = bulk.create_query_job("Contact", contentType=self.contentType, pk_chunking=True)
         self.jobs.append(job_id)
-        self.assertIsNotNone(re.match("\w+", job_id))
+        self.assertIsNotNone(re.match(r"\w+", job_id))
 
         query = "Select Id,Name,Email from Contact"
         batch_id = bulk.query(job_id, query)
-        self.assertIsNotNone(re.match("\w+", batch_id))
+        self.assertIsNotNone(re.match(r"\w+", batch_id))
 
         try:
             i = 0
@@ -349,7 +349,7 @@ class SalesforceBulkIntegrationTestCSV(unittest.TestCase):
 
         job_id = bulk.create_insert_job("Contact", contentType=self.contentType)
         self.jobs.append(job_id)
-        self.assertIsNotNone(re.match("\w+", job_id))
+        self.assertIsNotNone(re.match(r"\w+", job_id))
 
         batch_ids = []
         data = [
@@ -362,7 +362,7 @@ class SalesforceBulkIntegrationTestCSV(unittest.TestCase):
         for i in range(2):
             content = self.generate_content(data)
             batch_id = bulk.post_batch(job_id, content)
-            self.assertIsNotNone(re.match("\w+", batch_id))
+            self.assertIsNotNone(re.match(r"\w+", batch_id))
             batch_ids.append(batch_id)
 
         bulk.close_job(job_id)
@@ -388,7 +388,7 @@ class SalesforceBulkIntegrationTestCSV(unittest.TestCase):
 
         job_id = bulk.create_insert_job("Contact", contentType=self.contentType)
         self.jobs.append(job_id)
-        self.assertIsNotNone(re.match("\w+", job_id))
+        self.assertIsNotNone(re.match(r"\w+", job_id))
 
         batch_ids = []
         data = [
@@ -425,7 +425,7 @@ class SalesforceBulkIntegrationTestCSV(unittest.TestCase):
         for i in range(2):
             content = self.generate_content(data)
             batch_id = bulk.post_batch(job_id, content)
-            self.assertIsNotNone(re.match("\w+", batch_id))
+            self.assertIsNotNone(re.match(r"\w+", batch_id))
             batch_ids.append(batch_id)
 
         bulk.close_job(job_id)

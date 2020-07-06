@@ -306,7 +306,7 @@ class SalesforceBulk(object):
     def query(self, job_id, soql, contentType='CSV'):
         if job_id is None:
             job_id = self.create_job(
-                re.search(re.compile("from (\w+)", re.I), soql).group(1),
+                re.search(re.compile(r"from (\w+)", re.I), soql).group(1),
                 "query", contentType=contentType)
 
         job_content_type = self.job_content_types[job_id]
