@@ -20,7 +20,7 @@ packages = [
 
 requires = [
     'six',
-    'requests>=2.2.1',
+    'requests>=2.24.0',
     'unicodecsv>=0.14.1',
     'simple-salesforce>=1.0.0',
 
@@ -92,11 +92,10 @@ setup(
         'Natural Language :: English',
         'License :: OSI Approved :: MIT License',
         'Programming Language :: Python',
-        'Programming Language :: Python :: 2.7',
-        'Programming Language :: Python :: 3.3',
-        'Programming Language :: Python :: 3.4',
         'Programming Language :: Python :: 3.5',
         'Programming Language :: Python :: 3.6',
+        'Programming Language :: Python :: 3.7',
+        'Programming Language :: Python :: 3.8',
     ),
     cmdclass={
         'newpublish': PublishCommand,
