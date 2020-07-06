@@ -22,7 +22,7 @@ requires = [
     'six',
     'requests>=2.2.1',
     'unicodecsv>=0.14.1',
-    'simple-salesforce>=0.69',
+    'simple-salesforce>=1.0.0',
 
 ]
 
