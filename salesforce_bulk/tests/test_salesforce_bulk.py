@@ -210,13 +210,13 @@ class SalesforceBulkIntegrationTestCSV(unittest.TestCase):
         username = os.environ.get('SALESFORCE_BULK_TEST_USERNAME')
         password = os.environ.get('SALESFORCE_BULK_TEST_PASSWORD')
         security_token = os.environ.get('SALESFORCE_BULK_TEST_SECURITY_TOKEN')
-        sandbox = os.environ.get('SALESFORCE_BULK_TEST_SANDBOX')
+        domain = 'test' if os.environ.get('SALESFORCE_BULK_TEST_SANDBOX') else None
 
         if not all(x for x in [username, password, security_token]):
             raise unittest.SkipTest('Missing Configuration for logged in tests')
 
         sessionId, endpoint = SalesforceBulk.login_to_salesforce(
-            username, password, sandbox, security_token)
+            username, password, security_token, domain=domain)
 
         cls.endpoint = endpoint
         cls.sessionId = sessionId
