@@ -1,6 +1,6 @@
 mock
-pytest==3.2.3
+pytest==5.4.3
 six
-requests>=2.2.1
+requests>=2.24.0
 unicodecsv>=0.14.1
-simple-salesforce>0.69
+simple-salesforce>=1.0.0

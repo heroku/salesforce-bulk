@@ -83,14 +83,15 @@ class SalesforceBulk(object):
 
     def __init__(self, sessionId=None, host=None, username=None, password=None,
                  API_version=DEFAULT_API_VERSION, sandbox=False,
-                 security_token=None, organizationId=None, client_id=None):
+                 security_token=None, organizationId=None, client_id=None, domain=None):
         if not sessionId and not username:
             raise RuntimeError(
                 "Must supply either sessionId/instance_url or username/password")
         if not sessionId:
             sessionId, host = SalesforceBulk.login_to_salesforce(
                 username, password, sandbox=sandbox, security_token=security_token,
-                organizationId=organizationId, API_version=API_version, client_id=client_id)
+                organizationId=organizationId, API_version=API_version, client_id=client_id,
+                domain=domain)
 
         if host[0:4] == 'http':
             self.endpoint = host
@@ -107,13 +108,19 @@ class SalesforceBulk(object):
 
     @staticmethod
     def login_to_salesforce(username, password, sandbox=False, security_token=None,
-                            organizationId=None, client_id=None, API_version=DEFAULT_API_VERSION):
+                            organizationId=None, client_id=None, API_version=DEFAULT_API_VERSION,
+                            # domain is passed directly to SalesforceLogin and should be 'test' or
+                            # 'login' or 'something.my'
+                            domain=None):
         if client_id:
             client_id = "{prefix}/{app_name}".format(
                 prefix=DEFAULT_CLIENT_ID_PREFIX,
                 app_name=client_id)
         else:
             client_id = DEFAULT_CLIENT_ID_PREFIX
+
+        if domain is None and sandbox:
+            domain = 'test'
 
         if all(arg is not None for arg in (
                 username, password, security_token)):
@@ -123,7 +130,7 @@ class SalesforceBulk(object):
                 username=username,
                 password=password,
                 security_token=security_token,
-                sandbox=sandbox,
+                domain=domain,
                 sf_version=API_version,
                 client_id=client_id)
 
@@ -135,7 +142,7 @@ class SalesforceBulk(object):
                 username=username,
                 password=password,
                 organizationId=organizationId,
-                sandbox=sandbox,
+                domain=domain,
                 sf_version=API_version,
                 client_id=client_id)
 
@@ -299,7 +306,7 @@ class SalesforceBulk(object):
     def query(self, job_id, soql, contentType='CSV'):
         if job_id is None:
             job_id = self.create_job(
-                re.search(re.compile("from (\w+)", re.I), soql).group(1),
+                re.search(re.compile(r"from (\w+)", re.I), soql).group(1),
                 "query", contentType=contentType)
 
         job_content_type = self.job_content_types[job_id]
