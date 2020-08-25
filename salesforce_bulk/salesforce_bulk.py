@@ -309,7 +309,7 @@ class SalesforceBulk(object):
                 re.search(re.compile(r"from (\w+)", re.I), soql).group(1),
                 "query", contentType=contentType)
 
-        job_content_type = self.job_content_types[job_id] or contentType
+        job_content_type = self.job_content_types.get(job_id, contentType)
         http_content_type = job_to_http_content_type[job_content_type]
 
         headers = self.headers(content_type=http_content_type)
