@@ -81,7 +81,7 @@ Same example but for CSV:
 .. code-block:: python
 
     import unicodecsv
-    
+
     job = bulk.create_query_job("Contact", contentType='CSV')
     batch = bulk.query(job, "select Id,LastName from Contact")
     bulk.close_job(job)
@@ -113,6 +113,10 @@ number of records per chunk:
 Additionally if you want to do something more sophisticated you can provide a header value:
 
 ``bulk.create_query_job(object_name, contentType='CSV', pk_chunking='chunkSize=50000; startRow=00130000000xEftMGH')``
+
+Additionally if you want to set a http header yourself, you can pass a list of custom header values that will be added to the create job salesforce bulk api call:
+
+``bulk.create_query_job(object_name, contentType='CSV', pk_chunking='chunkSize=50000; startRow=00130000000xEftMGH', extra_headers={'Sforce-Disable-Batch-Retry':'TRUE'})``
 
 Bulk Insert, Update, Delete
 ---------------------------

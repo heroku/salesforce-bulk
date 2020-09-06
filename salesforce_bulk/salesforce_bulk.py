@@ -181,11 +181,14 @@ class SalesforceBulk(object):
         return self.create_job(object_name, "delete", **kwargs)
 
     def create_job(self, object_name=None, operation=None, contentType='CSV',
-                   concurrency=None, external_id_name=None, pk_chunking=False):
+                   concurrency=None, external_id_name=None, pk_chunking=False,
+                   extra_headers=None):
         assert(object_name is not None)
         assert(operation is not None)
 
-        extra_headers = {}
+        if(extra_headers is None):
+            extra_headers = {}
+            
         if pk_chunking:
             if pk_chunking is True:
                 pk_chunking = u'true'
