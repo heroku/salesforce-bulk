@@ -15,7 +15,7 @@ if sys.argv[-1] == 'publish':
     sys.exit()
 
 packages = [
-    'salesforce_bulk',
+    'salesforce_bulk_2_1_1',
 ]
 
 requires = [
@@ -35,7 +35,7 @@ with io.open(os.path.join(here, 'README.rst'), encoding='utf-8') as f:
 
 # Load the package's __version__.py module as a dictionary.
 about = {}
-with open(os.path.join(here, 'salesforce_bulk', '__version__.py')) as f:
+with open(os.path.join(here, 'salesforce_bulk_2_1_1', '__version__.py')) as f:
     exec(f.read(), about)
 
 
@@ -73,13 +73,14 @@ class PublishCommand(Command):
         sys.exit()
 
 setup(
-    name='salesforce-bulk',
+    name='salesforce_bulk_2_1_1',
     version=about['__version__'],
     description='Python interface to the Salesforce.com Bulk API.',
     long_description=long_description,
     author='Scott Persinger',
     author_email='scottp@heroku.com',
-    url='https://github.com/heroku/salesforce-bulk',
+    url='https://github.com/taulia/salesforce_bulk_2_1_1',
+    download_url='https://github.com/taulia/salesforce_bulk_2_1_1/archive/2.1.1.tar.gz',
     packages=packages,
     package_data={'': ['LICENSE']},
     include_package_data=True,

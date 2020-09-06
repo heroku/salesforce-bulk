@@ -1,4 +1,4 @@
-.. figure:: https://travis-ci.org/heroku/salesforce-bulk.svg?branch=master
+.. figure:: https://travis-ci.org/heroku/salesforce_bulk_2_1_1.svg?branch=master
    :alt: travis-badge
 
 Salesforce Bulk
@@ -11,7 +11,7 @@ Installation
 ------------
 .. code-block:: bash
 
-    pip install salesforce-bulk
+    pip install salesforce_bulk_2_1_1
 
 Authentication
 --------------
@@ -23,7 +23,7 @@ package to handle password based authentication.
 
 .. code-block:: python
 
-    from salesforce_bulk import SalesforceBulk
+    from salesforce_bulk_2_1_1 import SalesforceBulk
 
     bulk = SalesforceBulk(username=username, password=password, security_token=security_token)
     ...
@@ -34,7 +34,7 @@ you can use those directly:
 .. code-block:: python
 
     from urlparse import urlparse
-    from salesforce_bulk import SalesforceBulk
+    from salesforce_bulk_2_1_1 import SalesforceBulk
 
     bulk = SalesforceBulk(sessionId=sessionId, host=urlparse(instance_url).hostname)
     ...
@@ -63,7 +63,7 @@ Example
 .. code-block:: python
 
     import json
-    from salesforce_bulk.util import IteratorBytesIO
+    from salesforce_bulk_2_1_1.util import IteratorBytesIO
 
     job = bulk.create_query_job("Contact", contentType='JSON')
     batch = bulk.query(job, "select Id,LastName from Contact")
@@ -138,7 +138,7 @@ Full example:
 
 .. code-block:: python
 
-    from salesforce_bulk import CsvDictsAdapter
+    from salesforce_bulk_2_1_1 import CsvDictsAdapter
 
     job = bulk.create_insert_job("Account", contentType='CSV')
     accounts = [dict(Name="Account%d" % idx) for idx in xrange(5)]

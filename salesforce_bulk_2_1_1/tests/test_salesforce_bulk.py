@@ -22,9 +22,9 @@ from six.moves import range
 
 import unicodecsv
 
-from salesforce_bulk import SalesforceBulk, BulkApiError, UploadResult
-from salesforce_bulk import CsvDictsAdapter, bulk_states
-from salesforce_bulk.salesforce_bulk import BulkJobAborted, BulkBatchFailed
+from salesforce_bulk_2_1_1 import SalesforceBulk, BulkApiError, UploadResult
+from salesforce_bulk_2_1_1 import CsvDictsAdapter, bulk_states
+from salesforce_bulk_2_1_1.salesforce_bulk import BulkJobAborted, BulkBatchFailed
 
 nsclean = re.compile('{.*}')
 
