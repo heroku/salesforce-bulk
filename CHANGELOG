@@ -6,3 +6,5 @@
 1.0.8
 - Includes Upsert support
 - Allow API version to be specified by the caller
+2.1.1
+- Added support for adding custom headers
