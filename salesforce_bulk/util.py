@@ -11,3 +11,4 @@ class IteratorBytesIO(IOBase):
 
     def read(self, n=None):
         return bytes(bytearray(islice(self.iterator, None, n)))
+https://github.com/heroku/salesforce-bulk.wiki.git
