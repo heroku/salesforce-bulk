@@ -1,8 +1,39 @@
-1.1.0
+All notable changes to this project will be documented in this file.
+
+This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
+
+[Unreleased]
+
+[2.2.0] - 2020-11-12
+- Prettify code blocks in read me: https://github.com/heroku/salesforce-bulk/pull/64
+- Support version 1.0 of simple-salesforce for login: https://github.com/heroku/salesforce-bulk/pull/86
+- Replace master branch with main: https://github.com/heroku/salesforce-bulk/pull/88
+- Set contentType to default value if necessary: https://github.com/heroku/salesforce-bulk/pull/89
+
+[2.1.0] - 2018-02-20
+- Added the possibility to map data fields when uploading: https://github.com/heroku/salesforce-bulk/pull/55
+- Add pk-chunking support: https://github.com/heroku/salesforce-bulk/pull/57
+- Support batch list and batch request API : https://github.com/heroku/salesforce-bulk/pull/58
+
+[2.0.0 (including changes in 2.0.0dev7, 2.0.0dev6, 2.0.0dev5)] - 2017-08-31
+- Add missing import for time: https://github.com/heroku/salesforce-bulk/pull/21
+- Switches the csv library to unicodecsv: https://github.com/heroku/salesforce-bulk/pull/22
+- Add sandbox support to Bulk: https://github.com/heroku/salesforce-bulk/pull/23
+- Fix unexpected keyword argument: https://github.com/heroku/salesforce-bulk/pull/32
+- JSON support/Python 3/Tests: https://github.com/heroku/salesforce-bulk/pull/40
+- Travis tests : https://github.com/heroku/salesforce-bulk/pull/42
+- Docs updates, travis badge & version bump: https://github.com/heroku/salesforce-bulk/pull/43
+- Make exceptions pickleable: https://github.com/heroku/salesforce-bulk/pull/45
+- Add info about queryAll to README.md: https://github.com/heroku/salesforce-bulk/pull/48
+- Add raw download option: https://github.com/heroku/salesforce-bulk/pull/49
+- Ensure no deflate ever via accept-encoding: https://github.com/heroku/salesforce-bulk/pull/50
+
+[1.1.0] - 2015-08-18
 - Python 2.6 support thanks to VIVIDboarder: https://github.com/heroku/salesforce-bulk/pull/17
 - https://github.com/heroku/salesforce-bulk/pull/19
 - https://github.com/heroku/salesforce-bulk/pull/18
 - https://github.com/heroku/salesforce-bulk/pull/16
-1.0.8
+
+[1.0.8]
 - Includes Upsert support
 - Allow API version to be specified by the caller
