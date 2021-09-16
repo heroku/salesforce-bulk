@@ -1,0 +1,33 @@
+name: salesforce_bulk_tests
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+    branches:
+      - main
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        python-version: [3.5, 3.6, 3.7, 3.8]
+    env:
+      SALESFORCE_BULK_TEST_USERNAME: ${{ secrets.SALESFORCE_BULK_TEST_USERNAME }}
+      SALESFORCE_BULK_TEST_PASSWORD: ${{ secrets.SALESFORCE_BULK_TEST_PASSWORD }}
+      SALESFORCE_BULK_TEST_SECURITY_TOKEN: ${{ secrets.SALESFORCE_BULK_TEST_SECURITY_TOKEN }}
+    steps:
+      - uses: actions/checkout@v2
+      - name: Set up Python ${{ matrix.python-version }}
+        uses: actions/setup-python@v2
+        with:
+          python-version: ${{ matrix.python-version }}
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+      - name: Test with pytest
+        run: |
+          pytest
