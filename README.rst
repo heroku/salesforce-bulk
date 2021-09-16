@@ -1,5 +1,5 @@
-.. figure:: https://travis-ci.org/heroku/salesforce-bulk.svg?branch=main
-   :alt: travis-badge
+.. figure:: https://github.com/heroku/salesforce-bulk/actions/workflows/sf-bulk-tests.yml/badge.svg?branch=main
+    :alt: github-workflow-sf-bulk-tests-badge
 
 Salesforce Bulk
 ===============
