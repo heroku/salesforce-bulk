@@ -89,6 +89,9 @@ class SalesforceBulkTests(unittest.TestCase):
         extIdField = tree.findtext('{%s}externalIdFieldName' % self.bulk.jobNS)
         self.assertIsNone(extIdField)
 
+        ruleIdField = tree.findtext('{%s}assignmentRuleIdFieldName' % self.bulk.jobNS)
+        self.assertIsNone(ruleIdField)
+
     def test_create_job_doc_concurrency(self):
         doc = self.bulk.create_job_doc(
             'Contact', 'insert', concurrency='Serial'
@@ -109,6 +112,9 @@ class SalesforceBulkTests(unittest.TestCase):
 
         extIdField = tree.findtext('{%s}externalIdFieldName' % self.bulk.jobNS)
         self.assertIsNone(extIdField)
+
+        ruleIdField = tree.findtext('{%s}assignmentRuleIdFieldName' % self.bulk.jobNS)
+        self.assertIsNone(ruleIdField)
 
     def test_create_job_doc_external_id(self):
         doc = self.bulk.create_job_doc(
@@ -131,6 +137,33 @@ class SalesforceBulkTests(unittest.TestCase):
         extIdField = tree.findtext('{%s}externalIdFieldName' % self.bulk.jobNS)
         self.assertEqual(extIdField, 'ext_id__c')
 
+        ruleIdField = tree.findtext('{%s}assignmentRuleIdFieldName' % self.bulk.jobNS)
+        self.assertIsNone(ruleIdField)
+
+    def test_create_job_doc_rule_id(self):
+        doc = self.bulk.create_job_doc(
+            'Contact', 'update', assignment_rule_id='01Q000000000000'
+        )
+        tree = ET.fromstring(doc)
+
+        operation = tree.findtext('{%s}operation' % self.bulk.jobNS)
+        self.assertEqual(operation, 'update')
+
+        obj = tree.findtext('{%s}object' % self.bulk.jobNS)
+        self.assertEqual(obj, 'Contact')
+
+        contentType = tree.findtext('{%s}contentType' % self.bulk.jobNS)
+        self.assertEqual(contentType, 'CSV')
+
+        concurrencyMode = tree.findtext('{%s}concurrencyMode' % self.bulk.jobNS)
+        self.assertIsNone(concurrencyMode)
+
+        extIdField = tree.findtext('{%s}externalIdFieldName' % self.bulk.jobNS)
+        self.assertIsNone(extIdField)
+
+        ruleIdField = tree.findtext('{%s}assignmentRuleId' % self.bulk.jobNS)
+        self.assertEqual(ruleIdField, '01Q000000000000')
+
     def test_create_job_doc_json(self):
         doc = self.bulk.create_job_doc(
             'Contact', 'insert', contentType='JSON'
@@ -151,6 +184,9 @@ class SalesforceBulkTests(unittest.TestCase):
 
         extIdField = tree.findtext('{%s}externalIdFieldName' % self.bulk.jobNS)
         self.assertIsNone(extIdField)
+
+        ruleIdField = tree.findtext('{%s}assignmentRuleIdFieldName' % self.bulk.jobNS)
+        self.assertIsNone(ruleIdField)
 
     def test_create_close_job_doc(self):
         doc = self.bulk.create_close_job_doc()

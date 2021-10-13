@@ -200,7 +200,8 @@ class SalesforceBulk(object):
                                   operation=operation,
                                   contentType=contentType,
                                   concurrency=concurrency,
-                                  external_id_name=external_id_name)
+                                  external_id_name=external_id_name,
+                                  assignment_rule_id=assignment_rule_id)
 
         resp = requests.post(self.endpoint + "/job",
                              headers=self.headers(extra_headers),
@@ -257,13 +258,17 @@ class SalesforceBulk(object):
         self.check_status(resp)
 
     def create_job_doc(self, object_name=None, operation=None,
-                       contentType='CSV', concurrency=None, external_id_name=None):
+                       contentType='CSV', concurrency=None,
+                       external_id_name=None, assignment_rule_id=None):
         root = ET.Element("jobInfo")
         root.set("xmlns", self.jobNS)
+
         op = ET.SubElement(root, "operation")
         op.text = operation
+
         obj = ET.SubElement(root, "object")
         obj.text = object_name
+
         if external_id_name:
             ext = ET.SubElement(root, 'externalIdFieldName')
             ext.text = external_id_name
@@ -271,8 +276,13 @@ class SalesforceBulk(object):
         if concurrency:
             con = ET.SubElement(root, "concurrencyMode")
             con.text = concurrency
+
         ct = ET.SubElement(root, "contentType")
         ct.text = contentType
+
+        if assignment_rule_id:
+            asn = ET.SubElement(root, "assignmentRuleId")
+            asn.text = assignment_rule_id
 
         buf = StringIO()
         tree = ET.ElementTree(root)
