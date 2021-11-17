@@ -81,6 +81,7 @@ Same example but for CSV:
 .. code-block:: python
 
     import unicodecsv
+    from time import sleep
     
     job = bulk.create_query_job("Contact", contentType='CSV')
     batch = bulk.query(job, "select Id,LastName from Contact")
