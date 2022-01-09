@@ -74,13 +74,13 @@ Example
     for result in bulk.get_all_results_for_query_batch(batch):
         result = json.load(IteratorBytesIO(result))
         for row in result:
-            print row # dictionary rows
+            print(row) # dictionary rows
 
 Same example but for CSV:
 
 .. code-block:: python
 
-    import unicodecsv
+    import csv
     
     job = bulk.create_query_job("Contact", contentType='CSV')
     batch = bulk.query(job, "select Id,LastName from Contact")
@@ -89,7 +89,7 @@ Same example but for CSV:
         sleep(10)
 
     for result in bulk.get_all_results_for_query_batch(batch):
-        reader = unicodecsv.DictReader(result, encoding='utf-8')
+        reader = csv.DictReader(result.read().decode().splitlines())
         for row in reader:
             print(row) # dictionary rows
 
