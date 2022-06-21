@@ -83,7 +83,7 @@ class SalesforceBulk(object):
 
     def __init__(self, sessionId=None, host=None, username=None, password=None,
                  API_version=DEFAULT_API_VERSION, sandbox=False,
-                 security_token=None, organizationId=None, client_id=None, domain=None):
+                 security_token=None, organizationId=None, client_id=None, domain=None, timeout=None):
         if not sessionId and not username:
             raise RuntimeError(
                 "Must supply either sessionId/instance_url or username/password")
@@ -105,6 +105,7 @@ class SalesforceBulk(object):
         self.job_content_types = {}  # dict of job_id => contentType
         self.batch_statuses = {}
         self.API_version = API_version
+        self.timeout = timeout
 
     @staticmethod
     def login_to_salesforce(username, password, sandbox=False, security_token=None,
@@ -204,7 +205,7 @@ class SalesforceBulk(object):
 
         resp = requests.post(self.endpoint + "/job",
                              headers=self.headers(extra_headers),
-                             data=doc)
+                             data=doc, timeout=self.timeout)
         self.check_status(resp)
 
         tree = ET.fromstring(resp.content)
@@ -221,7 +222,7 @@ class SalesforceBulk(object):
 
     def get_batch_list(self, job_id):
         url = self.endpoint + "/job/{}/batch".format(job_id)
-        resp = requests.get(url, headers=self.headers())
+        resp = requests.get(url, headers=self.headers(), timeout=self.timeout)
         self.check_status(resp)
         results = self.parse_response(resp)
         if isinstance(results, dict):
@@ -235,25 +236,21 @@ class SalesforceBulk(object):
             job_id = self.lookup_job_id(batch_id)
 
         url = self.endpoint + "/job/{}/batch/{}/request".format(job_id, batch_id)
-        resp = requests.get(url, headers=self.headers())
+        resp = requests.get(url, headers=self.headers(), timeout=self.timeout)
         self.check_status(resp)
         return resp.text
 
     def close_job(self, job_id):
         doc = self.create_close_job_doc()
         url = self.endpoint + "/job/%s" % job_id
-        resp = requests.post(url, headers=self.headers(), data=doc)
+        resp = requests.post(url, headers=self.headers(), data=doc, timeout=self.timeout)
         self.check_status(resp)
 
     def abort_job(self, job_id):
         """Abort a given bulk job"""
         doc = self.create_abort_job_doc()
         url = self.endpoint + "/job/%s" % job_id
-        resp = requests.post(
-            url,
-            headers=self.headers(),
-            data=doc
-        )
+        resp = requests.post(url, headers=self.headers(), data=doc, timeout=self.timeout)
         self.check_status(resp)
 
     def create_job_doc(self, object_name=None, operation=None,
@@ -315,7 +312,7 @@ class SalesforceBulk(object):
         headers = self.headers(content_type=http_content_type)
 
         uri = self.endpoint + "/job/%s/batch" % job_id
-        resp = requests.post(uri, data=soql, headers=headers)
+        resp = requests.post(uri, data=soql, headers=headers, timeout=self.timeout)
 
         self.check_status(resp)
 
@@ -338,7 +335,7 @@ class SalesforceBulk(object):
 
         uri = self.endpoint + "/job/%s/batch" % job_id
         headers = self.headers(content_type=http_content_type)
-        resp = requests.post(uri, data=data_generator, headers=headers)
+        resp = requests.post(uri, data=data_generator, headers=headers, timeout=self.timeout)
         self.check_status(resp)
 
         result = self.parse_response(resp)
@@ -352,7 +349,7 @@ class SalesforceBulk(object):
         http_content_type = job_to_http_content_type[job_content_type]
         uri = self.endpoint + "/job/%s/spec" % job_id
         headers = self.headers(content_type=http_content_type)
-        resp = requests.post(uri, data=mapping_data, headers=headers)
+        resp = requests.post(uri, data=mapping_data, headers=headers, timeout=self.timeout)
         self.check_status(resp)
 
         if resp.status_code != 201:
@@ -368,7 +365,7 @@ class SalesforceBulk(object):
     def job_status(self, job_id=None):
         job_id = job_id
         uri = urlparse.urljoin(self.endpoint + "/", 'job/{0}'.format(job_id))
-        response = requests.get(uri, headers=self.headers())
+        response = requests.get(uri, headers=self.headers(), timeout=self.timeout)
         self.check_status(response)
 
         tree = ET.fromstring(response.content)
@@ -413,7 +410,7 @@ class SalesforceBulk(object):
 
         uri = self.endpoint + \
             "/job/%s/batch/%s" % (job_id, batch_id)
-        resp = requests.get(uri, headers=self.headers())
+        resp = requests.get(uri, headers=self.headers(), timeout=self.timeout)
         self.check_status(resp)
 
         result = self.parse_response(resp)
@@ -454,7 +451,7 @@ class SalesforceBulk(object):
             "job/{0}/batch/{1}/result".format(
                 job_id, batch_id),
         )
-        resp = requests.get(uri, headers=self.headers())
+        resp = requests.get(uri, headers=self.headers(), timeout=self.timeout)
         self.check_status(resp)
 
         if resp.headers['Content-Type'] == 'application/json':
@@ -494,7 +491,7 @@ class SalesforceBulk(object):
                 job_id, batch_id, result_id),
         )
 
-        resp = requests.get(uri, headers=self.headers(), stream=True)
+        resp = requests.get(uri, headers=self.headers(), stream=True, timeout=self.timeout)
         self.check_status(resp)
         if raw:
             return resp.raw
@@ -511,7 +508,7 @@ class SalesforceBulk(object):
                 job_id, batch_id),
         )
 
-        resp = requests.get(uri, headers=self.headers(), stream=True)
+        resp = requests.get(uri, headers=self.headers(), stream=True, timeout=self.timeout)
         self.check_status(resp)
 
         iter = (x.replace(b'\0', b'') for x in resp.iter_content())
