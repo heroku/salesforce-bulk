@@ -1,6 +1,6 @@
 mock
 pytest==5.4.3
 six
-requests>=2.24.0
+requests>=2.32.0
 unicodecsv>=0.14.1
 simple-salesforce>=1.0.0
