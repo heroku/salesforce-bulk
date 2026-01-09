@@ -4,3 +4,4 @@ six
 requests>=2.24.0
 unicodecsv>=0.14.1
 simple-salesforce>=1.0.0
+urllib3>=2.6.3 # not directly required, pinned by Snyk to avoid a vulnerability
