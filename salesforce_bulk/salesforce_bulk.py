@@ -1,27 +1,18 @@
 # Interface to the Salesforce BULK API
-from __future__ import absolute_import
-
 import io
 import json
 import re
 import time
+import urllib.parse as urlparse
 import xml.etree.ElementTree as ET
-
 from collections import namedtuple
+from io import BytesIO as StringIO
 from itertools import islice
 from operator import itemgetter
 
-try:
-    import urlparse
-except ImportError:
-    import urllib.parse as urlparse
-
-from six import BytesIO as StringIO
-from six import text_type
-
 import requests
-from simple_salesforce import SalesforceLogin
 import unicodecsv
+from simple_salesforce import SalesforceLogin
 
 from . import util
 from . import bulk_states
@@ -192,7 +183,7 @@ class SalesforceBulk(object):
             elif isinstance(pk_chunking, int):
                 pk_chunking = u'chunkSize=%d;' % pk_chunking
             else:
-                pk_chunking = text_type(pk_chunking)
+                pk_chunking = str(pk_chunking)
 
             extra_headers['Sforce-Enable-PKChunking'] = pk_chunking
 

@@ -1,7 +1,5 @@
 #!/usr/bin/env python
 
-from __future__ import absolute_import
-
 import io
 import os
 import sys
@@ -19,11 +17,9 @@ packages = [
 ]
 
 requires = [
-    'six',
     'requests>=2.24.0',
     'unicodecsv>=0.14.1',
     'simple-salesforce>=1.0.0',
-
 ]
 
 here = os.path.abspath(os.path.dirname(__file__))

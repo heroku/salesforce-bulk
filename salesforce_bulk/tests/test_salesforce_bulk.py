@@ -1,24 +1,13 @@
-from __future__ import absolute_import
-from __future__ import print_function
-
 import io
 import json
-import mock
 import os
 import pickle
 import re
 import time
+import unittest
 import xml.etree.ElementTree as ET
-
-try:
-    # Python 2.6
-    import unittest2 as unittest
-except ImportError:
-    import unittest
-
 from itertools import islice
-
-from six.moves import range
+from unittest import mock
 
 import unicodecsv
 
