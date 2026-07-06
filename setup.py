@@ -1,7 +1,5 @@
 #!/usr/bin/env python
 
-from __future__ import absolute_import
-
 import io
 import os
 import sys
@@ -19,11 +17,9 @@ packages = [
 ]
 
 requires = [
-    'six',
     'requests>=2.24.0',
     'unicodecsv>=0.14.1',
     'simple-salesforce>=1.0.0',
-
 ]
 
 here = os.path.abspath(os.path.dirname(__file__))
@@ -92,10 +88,11 @@ setup(
         'Natural Language :: English',
         'License :: OSI Approved :: MIT License',
         'Programming Language :: Python',
-        'Programming Language :: Python :: 3.5',
-        'Programming Language :: Python :: 3.6',
-        'Programming Language :: Python :: 3.7',
-        'Programming Language :: Python :: 3.8',
+        'Programming Language :: Python :: 3.10',
+        'Programming Language :: Python :: 3.11',
+        'Programming Language :: Python :: 3.12',
+        'Programming Language :: Python :: 3.13',
+        'Programming Language :: Python :: 3.14',
     ),
     cmdclass={
         'newpublish': PublishCommand,

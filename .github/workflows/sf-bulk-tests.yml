@@ -7,21 +7,22 @@ on:
   pull_request:
     branches:
       - main
+  workflow_dispatch:
 
 jobs:
   build:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        python-version: [3.5, 3.6, 3.7, 3.8]
+        python-version: ["3.10", "3.11", "3.12", "3.13", "3.14"]
     env:
       SALESFORCE_BULK_TEST_USERNAME: ${{ secrets.SALESFORCE_BULK_TEST_USERNAME }}
       SALESFORCE_BULK_TEST_PASSWORD: ${{ secrets.SALESFORCE_BULK_TEST_PASSWORD }}
       SALESFORCE_BULK_TEST_SECURITY_TOKEN: ${{ secrets.SALESFORCE_BULK_TEST_SECURITY_TOKEN }}
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v6
       - name: Set up Python ${{ matrix.python-version }}
-        uses: actions/setup-python@v2
+        uses: actions/setup-python@v5
         with:
           python-version: ${{ matrix.python-version }}
       - name: Install dependencies
